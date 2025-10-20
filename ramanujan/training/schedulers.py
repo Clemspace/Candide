@@ -1,34 +1,187 @@
 """
 Learning rate schedulers for Ramanujan Transformer training.
 
-This module provides various learning rate scheduling strategies:
-- CosineWarmupScheduler: Cosine decay with linear warmup
-- CosineWarmupWithRestarts: Cosine with periodic restarts
-- LinearWarmupScheduler: Simple linear warmup then constant
-- PolynomialDecayScheduler: Polynomial decay with warmup
+Modern scheduling strategies based on latest research:
+- WSD (Warmup-Stable-Decay): State-of-the-art 3-phase schedule
+- Cosine with Warmup: Standard GPT-3/LLaMA style
+- Cosine with Restarts: Periodic resets for long training
+- Linear, Polynomial, InverseSqrt: Classic schedules
+
+Factory pattern for easy creation and configuration.
 
 Example:
-    >>> from ramanujan.training import CosineWarmupScheduler
+    >>> from ramanujan.training import SchedulerFactory, SchedulerConfig
     >>> 
-    >>> scheduler = CosineWarmupScheduler(
-    ...     optimizer,
+    >>> # Using factory with config
+    >>> config = SchedulerConfig(
+    ...     scheduler_type='wsd',
     ...     warmup_steps=1000,
+    ...     stable_steps=4500,
     ...     max_steps=10000,
-    ...     min_lr=1e-6
+    ...     min_lr=1e-5
     ... )
+    >>> scheduler = SchedulerFactory.create(optimizer, config)
     >>> 
-    >>> # Training loop
-    >>> for step in range(max_steps):
-    ...     loss.backward()
-    ...     optimizer.step()
-    ...     scheduler.step()
+    >>> # Or directly
+    >>> scheduler = create_scheduler(
+    ...     optimizer,
+    ...     scheduler_type='wsd',
+    ...     warmup_steps=1000,
+    ...     max_steps=10000
+    ... )
 """
 
 import torch
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 import math
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from dataclasses import dataclass
+
+
+# ============================================================================
+# SCHEDULER CONFIGURATION
+# ============================================================================
+
+@dataclass
+class SchedulerConfig:
+    """
+    Configuration for learning rate schedulers.
+    
+    Args:
+        scheduler_type: Type of scheduler ('wsd', 'cosine', 'cosine_restarts', etc.)
+        warmup_steps: Number of warmup steps
+        max_steps: Total training steps
+        min_lr: Minimum learning rate (default: 1e-6)
+        
+        # WSD-specific
+        stable_steps: Steps at peak LR (for WSD scheduler)
+        
+        # Restart-specific
+        first_cycle_steps: Steps in first cycle (for restarts)
+        cycle_mult: Cycle length multiplier (for restarts)
+        max_lr_decay: Max LR decay per cycle (for restarts)
+        
+        # Polynomial-specific
+        power: Polynomial power (for polynomial decay)
+        
+        # Re-warming (experimental)
+        use_rewarm: Enable periodic re-warming
+        rewarm_every: Steps between re-warms
+        rewarm_steps: Duration of re-warm
+        rewarm_lr_ratio: LR ratio for re-warm (0.5 = 50% of base_lr)
+    """
+    scheduler_type: str = 'cosine'
+    warmup_steps: int = 1000
+    max_steps: int = 10000
+    min_lr: float = 1e-6
+    
+    # WSD
+    stable_steps: Optional[int] = None
+    
+    # Restarts
+    first_cycle_steps: Optional[int] = None
+    cycle_mult: float = 1.0
+    max_lr_decay: float = 1.0
+    
+    # Polynomial
+    power: float = 1.0
+    
+    # Re-warming
+    use_rewarm: bool = False
+    rewarm_every: Optional[int] = None
+    rewarm_steps: int = 1000
+    rewarm_lr_ratio: float = 0.5
+
+
+# ============================================================================
+# WSD SCHEDULER (State-of-the-Art)
+# ============================================================================
+
+class WSDScheduler(_LRScheduler):
+    """
+    Warmup-Stable-Decay scheduler.
+    
+    Modern 3-phase schedule used in Mistral, Mixtral, and recent LLMs.
+    Outperforms 2-phase cosine in practice.
+    
+    Phase 1: Linear warmup (0 → max_lr)
+    Phase 2: Stable at max_lr (NEW!)
+    Phase 3: Cosine decay (max_lr → min_lr)
+    
+    The stable phase allows the model to fully explore at peak LR
+    before gradually annealing, leading to better final performance.
+    
+    Args:
+        optimizer: PyTorch optimizer
+        warmup_steps: Number of warmup steps
+        stable_steps: Number of steps at peak LR
+        max_steps: Total training steps
+        min_lr: Minimum learning rate
+        last_epoch: Last epoch (for resuming)
+    
+    Example:
+        >>> # 5% warmup, 45% stable, 50% decay
+        >>> scheduler = WSDScheduler(
+        ...     optimizer,
+        ...     warmup_steps=500,
+        ...     stable_steps=4500,
+        ...     max_steps=10000,
+        ...     min_lr=1e-5
+        ... )
+    """
+    
+    def __init__(
+        self,
+        optimizer: Optimizer,
+        warmup_steps: int,
+        stable_steps: int,
+        max_steps: int,
+        min_lr: float = 1e-6,
+        last_epoch: int = -1
+    ):
+        self.warmup_steps = warmup_steps
+        self.stable_steps = stable_steps
+        self.decay_steps = max_steps - warmup_steps - stable_steps
+        self.max_steps = max_steps
+        self.min_lr = min_lr
+        
+        if self.decay_steps <= 0:
+            raise ValueError(
+                f"decay_steps must be > 0. Got: {self.decay_steps}. "
+                f"max_steps ({max_steps}) must be > warmup_steps ({warmup_steps}) + stable_steps ({stable_steps})"
+            )
+        
+        super().__init__(optimizer, last_epoch)
+    
+    def get_lr(self) -> List[float]:
+        """Compute learning rate with WSD schedule."""
+        step = self.last_epoch
+        
+        if step < self.warmup_steps:
+            # Phase 1: Linear warmup
+            alpha = step / self.warmup_steps
+            return [base_lr * alpha for base_lr in self.base_lrs]
+        
+        elif step < self.warmup_steps + self.stable_steps:
+            # Phase 2: Stable at peak LR
+            return self.base_lrs
+        
+        elif step < self.max_steps:
+            # Phase 3: Cosine decay
+            decay_step = step - self.warmup_steps - self.stable_steps
+            progress = decay_step / self.decay_steps
+            progress = min(1.0, progress)
+            
+            cosine_decay = 0.5 * (1 + math.cos(math.pi * progress))
+            
+            return [
+                self.min_lr + (base_lr - self.min_lr) * cosine_decay
+                for base_lr in self.base_lrs
+            ]
+        else:
+            # Past max_steps: return min_lr
+            return [self.min_lr for _ in self.base_lrs]
 
 
 # ============================================================================
@@ -39,18 +192,17 @@ class CosineWarmupScheduler(_LRScheduler):
     """
     Cosine annealing schedule with linear warmup.
     
-    Learning rate schedule:
-    1. Linear warmup from 0 to base_lr over warmup_steps
-    2. Cosine decay from base_lr to min_lr over remaining steps
+    The standard schedule for transformer training (GPT-3, LLaMA).
     
-    This is the most common schedule for transformer training.
+    Phase 1: Linear warmup (0 → max_lr)
+    Phase 2: Cosine decay (max_lr → min_lr)
     
     Args:
         optimizer: Optimizer instance
         warmup_steps: Number of warmup steps
         max_steps: Total number of training steps
-        min_lr: Minimum learning rate (default: 0)
-        last_epoch: Last epoch index (default: -1)
+        min_lr: Minimum learning rate
+        last_epoch: Last epoch index
     
     Example:
         >>> scheduler = CosineWarmupScheduler(
@@ -59,10 +211,6 @@ class CosineWarmupScheduler(_LRScheduler):
         ...     max_steps=10000,
         ...     min_lr=1e-6
         ... )
-        >>> 
-        >>> for step in range(max_steps):
-        ...     train_step()
-        ...     scheduler.step()
     """
     
     def __init__(
@@ -70,24 +218,33 @@ class CosineWarmupScheduler(_LRScheduler):
         optimizer: Optimizer,
         warmup_steps: int,
         max_steps: int,
-        min_lr: float = 0.0,
+        min_lr: float = 1e-6,
         last_epoch: int = -1
     ):
         self.warmup_steps = warmup_steps
         self.max_steps = max_steps
         self.min_lr = min_lr
+        
+        if max_steps <= warmup_steps:
+            raise ValueError(
+                f"max_steps ({max_steps}) must be > warmup_steps ({warmup_steps})"
+            )
+        
         super().__init__(optimizer, last_epoch)
     
     def get_lr(self) -> List[float]:
         """Compute learning rate for current step."""
-        if self.last_epoch < self.warmup_steps:
+        step = self.last_epoch
+        
+        if step < self.warmup_steps:
             # Linear warmup
-            alpha = self.last_epoch / self.warmup_steps
+            alpha = step / self.warmup_steps
             return [base_lr * alpha for base_lr in self.base_lrs]
-        else:
+        
+        elif step < self.max_steps:
             # Cosine decay
-            progress = (self.last_epoch - self.warmup_steps) / (self.max_steps - self.warmup_steps)
-            progress = min(progress, 1.0)
+            progress = (step - self.warmup_steps) / (self.max_steps - self.warmup_steps)
+            progress = min(1.0, progress)
             
             cosine_decay = 0.5 * (1 + math.cos(math.pi * progress))
             
@@ -95,6 +252,9 @@ class CosineWarmupScheduler(_LRScheduler):
                 self.min_lr + (base_lr - self.min_lr) * cosine_decay
                 for base_lr in self.base_lrs
             ]
+        else:
+            # Past max_steps
+            return [self.min_lr for _ in self.base_lrs]
 
 
 # ============================================================================
@@ -106,16 +266,16 @@ class CosineWarmupWithRestarts(_LRScheduler):
     Cosine annealing with periodic warm restarts (SGDR).
     
     Periodically resets learning rate to initial value and performs
-    cosine decay. This can help escape local minima.
+    cosine decay. Can help escape local minima in long training runs.
     
     Args:
         optimizer: Optimizer instance
         warmup_steps: Number of warmup steps (only for first cycle)
         first_cycle_steps: Steps in first cycle
-        cycle_mult: Multiplier for cycle length (default: 1.0)
-        min_lr: Minimum learning rate (default: 0)
-        max_lr_decay: Decay max LR each cycle (default: 1.0, no decay)
-        last_epoch: Last epoch index (default: -1)
+        cycle_mult: Multiplier for cycle length
+        min_lr: Minimum learning rate
+        max_lr_decay: Decay max LR each cycle
+        last_epoch: Last epoch index
     
     Example:
         >>> scheduler = CosineWarmupWithRestarts(
@@ -133,7 +293,7 @@ class CosineWarmupWithRestarts(_LRScheduler):
         warmup_steps: int,
         first_cycle_steps: int,
         cycle_mult: float = 1.0,
-        min_lr: float = 0.0,
+        min_lr: float = 1e-6,
         max_lr_decay: float = 1.0,
         last_epoch: int = -1
     ):
@@ -200,18 +360,12 @@ class LinearWarmupScheduler(_LRScheduler):
     """
     Linear warmup followed by constant learning rate.
     
-    Simple schedule that warms up linearly then maintains constant LR.
+    Simple schedule: warms up linearly then maintains constant LR.
     
     Args:
         optimizer: Optimizer instance
         warmup_steps: Number of warmup steps
-        last_epoch: Last epoch index (default: -1)
-    
-    Example:
-        >>> scheduler = LinearWarmupScheduler(
-        ...     optimizer,
-        ...     warmup_steps=1000
-        ... )
+        last_epoch: Last epoch index
     """
     
     def __init__(
@@ -226,11 +380,9 @@ class LinearWarmupScheduler(_LRScheduler):
     def get_lr(self) -> List[float]:
         """Compute learning rate for current step."""
         if self.last_epoch < self.warmup_steps:
-            # Linear warmup
             alpha = self.last_epoch / self.warmup_steps
             return [base_lr * alpha for base_lr in self.base_lrs]
         else:
-            # Constant
             return self.base_lrs
 
 
@@ -248,18 +400,9 @@ class PolynomialDecayScheduler(_LRScheduler):
         optimizer: Optimizer instance
         warmup_steps: Number of warmup steps
         max_steps: Total number of training steps
-        min_lr: Minimum learning rate (default: 0)
-        power: Polynomial power (default: 1.0, linear decay)
-        last_epoch: Last epoch index (default: -1)
-    
-    Example:
-        >>> # Quadratic decay
-        >>> scheduler = PolynomialDecayScheduler(
-        ...     optimizer,
-        ...     warmup_steps=1000,
-        ...     max_steps=10000,
-        ...     power=2.0
-        ... )
+        min_lr: Minimum learning rate
+        power: Polynomial power (1.0 = linear decay, 2.0 = quadratic)
+        last_epoch: Last epoch index
     """
     
     def __init__(
@@ -267,7 +410,7 @@ class PolynomialDecayScheduler(_LRScheduler):
         optimizer: Optimizer,
         warmup_steps: int,
         max_steps: int,
-        min_lr: float = 0.0,
+        min_lr: float = 1e-6,
         power: float = 1.0,
         last_epoch: int = -1
     ):
@@ -275,18 +418,23 @@ class PolynomialDecayScheduler(_LRScheduler):
         self.max_steps = max_steps
         self.min_lr = min_lr
         self.power = power
+        
+        if max_steps <= warmup_steps:
+            raise ValueError(f"max_steps must be > warmup_steps")
+        
         super().__init__(optimizer, last_epoch)
     
     def get_lr(self) -> List[float]:
         """Compute learning rate for current step."""
-        if self.last_epoch < self.warmup_steps:
-            # Linear warmup
-            alpha = self.last_epoch / self.warmup_steps
+        step = self.last_epoch
+        
+        if step < self.warmup_steps:
+            alpha = step / self.warmup_steps
             return [base_lr * alpha for base_lr in self.base_lrs]
-        else:
-            # Polynomial decay
-            progress = (self.last_epoch - self.warmup_steps) / (self.max_steps - self.warmup_steps)
-            progress = min(progress, 1.0)
+        
+        elif step < self.max_steps:
+            progress = (step - self.warmup_steps) / (self.max_steps - self.warmup_steps)
+            progress = min(1.0, progress)
             
             decay_factor = (1 - progress) ** self.power
             
@@ -294,6 +442,8 @@ class PolynomialDecayScheduler(_LRScheduler):
                 self.min_lr + (base_lr - self.min_lr) * decay_factor
                 for base_lr in self.base_lrs
             ]
+        else:
+            return [self.min_lr for _ in self.base_lrs]
 
 
 # ============================================================================
@@ -304,19 +454,13 @@ class InverseSqrtScheduler(_LRScheduler):
     """
     Inverse square root decay with warmup.
     
-    Used in "Attention is All You Need" paper.
-    LR increases linearly during warmup, then decays proportional to 1/sqrt(step).
+    Used in original "Attention is All You Need" paper.
+    LR increases linearly during warmup, then decays ∝ 1/sqrt(step).
     
     Args:
         optimizer: Optimizer instance
         warmup_steps: Number of warmup steps
-        last_epoch: Last epoch index (default: -1)
-    
-    Example:
-        >>> scheduler = InverseSqrtScheduler(
-        ...     optimizer,
-        ...     warmup_steps=4000
-        ... )
+        last_epoch: Last epoch index
     """
     
     def __init__(
@@ -332,7 +476,7 @@ class InverseSqrtScheduler(_LRScheduler):
         """Compute learning rate for current step."""
         step = max(self.last_epoch, 1)
         
-        # Scale factor: min(step^-0.5, step * warmup_steps^-1.5)
+        # Scale: min(step^-0.5, step * warmup_steps^-1.5)
         scale = min(
             step ** -0.5,
             step * (self.warmup_steps ** -1.5)
@@ -345,6 +489,142 @@ class InverseSqrtScheduler(_LRScheduler):
 # SCHEDULER FACTORY
 # ============================================================================
 
+class SchedulerFactory:
+    """
+    Factory for creating learning rate schedulers.
+    
+    Provides unified interface for all scheduler types with
+    configuration-based creation.
+    
+    Example:
+        >>> from ramanujan.training import SchedulerFactory, SchedulerConfig
+        >>> 
+        >>> # Create with config object
+        >>> config = SchedulerConfig(
+        ...     scheduler_type='wsd',
+        ...     warmup_steps=500,
+        ...     stable_steps=4500,
+        ...     max_steps=10000
+        ... )
+        >>> scheduler = SchedulerFactory.create(optimizer, config)
+        >>> 
+        >>> # Create from dictionary
+        >>> config_dict = {
+        ...     'scheduler_type': 'cosine',
+        ...     'warmup_steps': 1000,
+        ...     'max_steps': 10000,
+        ...     'min_lr': 1e-6
+        ... }
+        >>> scheduler = SchedulerFactory.create_from_dict(optimizer, config_dict)
+    """
+    
+    @staticmethod
+    def create(
+        optimizer: Optimizer,
+        config: SchedulerConfig
+    ) -> _LRScheduler:
+        """
+        Create scheduler from configuration.
+        
+        Args:
+            optimizer: PyTorch optimizer
+            config: SchedulerConfig instance
+        
+        Returns:
+            Scheduler instance
+        """
+        scheduler_type = config.scheduler_type.lower()
+        
+        if scheduler_type in ['wsd', 'warmup_stable_decay']:
+            # Auto-compute stable_steps if not provided
+            stable_steps = config.stable_steps
+            if stable_steps is None:
+                # Default: 45% of total steps for stable phase
+                stable_steps = int(0.45 * config.max_steps)
+            
+            return WSDScheduler(
+                optimizer,
+                warmup_steps=config.warmup_steps,
+                stable_steps=stable_steps,
+                max_steps=config.max_steps,
+                min_lr=config.min_lr
+            )
+        
+        elif scheduler_type in ['cosine', 'cosine_warmup']:
+            return CosineWarmupScheduler(
+                optimizer,
+                warmup_steps=config.warmup_steps,
+                max_steps=config.max_steps,
+                min_lr=config.min_lr
+            )
+        
+        elif scheduler_type in ['cosine_restarts', 'sgdr']:
+            first_cycle_steps = config.first_cycle_steps
+            if first_cycle_steps is None:
+                first_cycle_steps = config.max_steps // 2
+            
+            return CosineWarmupWithRestarts(
+                optimizer,
+                warmup_steps=config.warmup_steps,
+                first_cycle_steps=first_cycle_steps,
+                cycle_mult=config.cycle_mult,
+                min_lr=config.min_lr,
+                max_lr_decay=config.max_lr_decay
+            )
+        
+        elif scheduler_type in ['linear', 'linear_warmup']:
+            return LinearWarmupScheduler(
+                optimizer,
+                warmup_steps=config.warmup_steps
+            )
+        
+        elif scheduler_type in ['polynomial', 'poly']:
+            return PolynomialDecayScheduler(
+                optimizer,
+                warmup_steps=config.warmup_steps,
+                max_steps=config.max_steps,
+                min_lr=config.min_lr,
+                power=config.power
+            )
+        
+        elif scheduler_type in ['inverse_sqrt', 'invsqrt']:
+            return InverseSqrtScheduler(
+                optimizer,
+                warmup_steps=config.warmup_steps
+            )
+        
+        else:
+            raise ValueError(
+                f"Unknown scheduler_type: {scheduler_type}. "
+                f"Choose from: 'wsd', 'cosine', 'cosine_restarts', "
+                f"'linear', 'polynomial', 'inverse_sqrt'"
+            )
+    
+    @staticmethod
+    def create_from_dict(
+        optimizer: Optimizer,
+        config_dict: Dict[str, Any]
+    ) -> _LRScheduler:
+        """
+        Create scheduler from dictionary.
+        
+        Useful for loading from YAML/JSON configs.
+        
+        Args:
+            optimizer: PyTorch optimizer
+            config_dict: Dictionary with scheduler parameters
+        
+        Returns:
+            Scheduler instance
+        """
+        config = SchedulerConfig(**config_dict)
+        return SchedulerFactory.create(optimizer, config)
+
+
+# ============================================================================
+# LEGACY FUNCTION (for backward compatibility)
+# ============================================================================
+
 def create_scheduler(
     optimizer: Optimizer,
     scheduler_type: str = 'cosine',
@@ -353,90 +633,34 @@ def create_scheduler(
     **kwargs
 ) -> _LRScheduler:
     """
-    Create learning rate scheduler.
+    Create learning rate scheduler (legacy function).
+    
+    Use SchedulerFactory.create() for new code.
     
     Args:
         optimizer: Optimizer instance
-        scheduler_type: Type of scheduler ('cosine', 'cosine_restarts', 'linear', 'polynomial', 'inverse_sqrt')
+        scheduler_type: Type of scheduler
         warmup_steps: Number of warmup steps
         max_steps: Total training steps
         **kwargs: Additional scheduler-specific arguments
     
     Returns:
         Scheduler instance
-    
-    Example:
-        >>> # Cosine schedule
-        >>> scheduler = create_scheduler(
-        ...     optimizer,
-        ...     scheduler_type='cosine',
-        ...     warmup_steps=1000,
-        ...     max_steps=10000,
-        ...     min_lr=1e-6
-        ... )
-        >>> 
-        >>> # Cosine with restarts
-        >>> scheduler = create_scheduler(
-        ...     optimizer,
-        ...     scheduler_type='cosine_restarts',
-        ...     warmup_steps=1000,
-        ...     first_cycle_steps=5000,
-        ...     cycle_mult=1.5
-        ... )
     """
-    scheduler_type = scheduler_type.lower()
-    
-    if scheduler_type in ['cosine', 'cosine_warmup']:
-        return CosineWarmupScheduler(
-            optimizer,
-            warmup_steps=warmup_steps,
-            max_steps=max_steps,
-            min_lr=kwargs.get('min_lr', 0.0)
-        )
-    
-    elif scheduler_type in ['cosine_restarts', 'sgdr']:
-        return CosineWarmupWithRestarts(
-            optimizer,
-            warmup_steps=warmup_steps,
-            first_cycle_steps=kwargs.get('first_cycle_steps', max_steps // 2),
-            cycle_mult=kwargs.get('cycle_mult', 1.0),
-            min_lr=kwargs.get('min_lr', 0.0),
-            max_lr_decay=kwargs.get('max_lr_decay', 1.0)
-        )
-    
-    elif scheduler_type in ['linear', 'linear_warmup']:
-        return LinearWarmupScheduler(
-            optimizer,
-            warmup_steps=warmup_steps
-        )
-    
-    elif scheduler_type in ['polynomial', 'poly']:
-        return PolynomialDecayScheduler(
-            optimizer,
-            warmup_steps=warmup_steps,
-            max_steps=max_steps,
-            min_lr=kwargs.get('min_lr', 0.0),
-            power=kwargs.get('power', 1.0)
-        )
-    
-    elif scheduler_type in ['inverse_sqrt', 'invsqrt']:
-        return InverseSqrtScheduler(
-            optimizer,
-            warmup_steps=warmup_steps
-        )
-    
-    else:
-        raise ValueError(
-            f"Unknown scheduler_type: {scheduler_type}. "
-            f"Choose from: 'cosine', 'cosine_restarts', 'linear', 'polynomial', 'inverse_sqrt'"
-        )
+    config = SchedulerConfig(
+        scheduler_type=scheduler_type,
+        warmup_steps=warmup_steps,
+        max_steps=max_steps,
+        **kwargs
+    )
+    return SchedulerFactory.create(optimizer, config)
 
 
 # ============================================================================
 # SCHEDULER UTILITIES
 # ============================================================================
 
-def get_scheduler_info(scheduler: _LRScheduler) -> dict:
+def get_scheduler_info(scheduler: _LRScheduler) -> Dict[str, Any]:
     """
     Get information about scheduler.
     
@@ -449,7 +673,8 @@ def get_scheduler_info(scheduler: _LRScheduler) -> dict:
     info = {
         'type': scheduler.__class__.__name__,
         'last_epoch': scheduler.last_epoch,
-        'base_lrs': scheduler.base_lrs
+        'base_lrs': scheduler.base_lrs,
+        'current_lr': scheduler.get_lr()[0] if scheduler.base_lrs else None
     }
     
     # Add scheduler-specific info
@@ -459,6 +684,8 @@ def get_scheduler_info(scheduler: _LRScheduler) -> dict:
         info['max_steps'] = scheduler.max_steps
     if hasattr(scheduler, 'min_lr'):
         info['min_lr'] = scheduler.min_lr
+    if hasattr(scheduler, 'stable_steps'):
+        info['stable_steps'] = scheduler.stable_steps
     
     return info
 
@@ -477,8 +704,8 @@ def plot_schedule(
         save_path: Optional path to save plot
     
     Example:
-        >>> scheduler = CosineWarmupScheduler(optimizer, 100, 1000)
-        >>> plot_schedule(scheduler, num_steps=1000, save_path='schedule.png')
+        >>> scheduler = WSDScheduler(optimizer, 500, 4500, 10000)
+        >>> plot_schedule(scheduler, num_steps=10000, save_path='wsd_schedule.png')
     """
     try:
         import matplotlib.pyplot as plt
@@ -500,12 +727,18 @@ def plot_schedule(
     scheduler.last_epoch = original_epoch
     
     # Plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(lrs)
-    plt.xlabel('Step')
-    plt.ylabel('Learning Rate')
-    plt.title(f'{scheduler.__class__.__name__} Schedule')
+    plt.figure(figsize=(12, 6))
+    plt.plot(lrs, linewidth=2)
+    plt.xlabel('Step', fontsize=12)
+    plt.ylabel('Learning Rate', fontsize=12)
+    plt.title(f'{scheduler.__class__.__name__} Schedule', fontsize=14)
     plt.grid(True, alpha=0.3)
+    
+    # Add phase annotations for WSD
+    if isinstance(scheduler, WSDScheduler):
+        plt.axvline(scheduler.warmup_steps, color='r', linestyle='--', alpha=0.5, label='Warmup end')
+        plt.axvline(scheduler.warmup_steps + scheduler.stable_steps, color='g', linestyle='--', alpha=0.5, label='Stable end')
+        plt.legend()
     
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
@@ -516,158 +749,192 @@ def plot_schedule(
     plt.close()
 
 
+def compare_schedules(
+    optimizer: Optimizer,
+    configs: Dict[str, SchedulerConfig],
+    num_steps: int = 10000,
+    save_path: Optional[str] = None
+):
+    """
+    Compare multiple scheduler configurations.
+    
+    Args:
+        optimizer: Optimizer instance
+        configs: Dictionary mapping names to SchedulerConfig instances
+        num_steps: Number of steps to plot
+        save_path: Optional path to save plot
+    
+    Example:
+        >>> configs = {
+        ...     'Cosine': SchedulerConfig('cosine', 1000, 10000),
+        ...     'WSD': SchedulerConfig('wsd', 500, 10000, stable_steps=4500)
+        ... }
+        >>> compare_schedules(optimizer, configs, save_path='comparison.png')
+    """
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("Matplotlib not available")
+        return
+    
+    plt.figure(figsize=(14, 7))
+    
+    for name, config in configs.items():
+        scheduler = SchedulerFactory.create(optimizer, config)
+        
+        lrs = []
+        scheduler.last_epoch = -1
+        for _ in range(num_steps):
+            scheduler.step()
+            lrs.append(scheduler.get_lr()[0])
+        
+        plt.plot(lrs, label=name, linewidth=2)
+    
+    plt.xlabel('Step', fontsize=12)
+    plt.ylabel('Learning Rate', fontsize=12)
+    plt.title('Learning Rate Schedule Comparison', fontsize=14)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Comparison plot saved to {save_path}")
+    else:
+        plt.show()
+    
+    plt.close()
+
+
+# ============================================================================
+# EXPORTS
+# ============================================================================
+
+__all__ = [
+    # Schedulers
+    'WSDScheduler',
+    'CosineWarmupScheduler',
+    'CosineWarmupWithRestarts',
+    'LinearWarmupScheduler',
+    'PolynomialDecayScheduler',
+    'InverseSqrtScheduler',
+    
+    # Factory
+    'SchedulerFactory',
+    'SchedulerConfig',
+    'create_scheduler',
+    
+    # Utilities
+    'get_scheduler_info',
+    'plot_schedule',
+    'compare_schedules',
+]
+
+
 # ============================================================================
 # TESTING
 # ============================================================================
 
 if __name__ == "__main__":
     print("="*70)
-    print("Testing schedulers.py module")
+    print("Testing improved schedulers.py module")
     print("="*70)
     
     # Create dummy optimizer
     import torch.nn as nn
     model = nn.Linear(10, 10)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
     
-    # Test CosineWarmupScheduler
-    print("\n1. Testing CosineWarmupScheduler...")
-    scheduler = CosineWarmupScheduler(
+    # Test WSDScheduler
+    print("\n1. Testing WSDScheduler (State-of-the-Art)...")
+    wsd = WSDScheduler(
         optimizer,
-        warmup_steps=100,
-        max_steps=1000,
+        warmup_steps=500,
+        stable_steps=4500,
+        max_steps=10000,
+        min_lr=1e-5
+    )
+    
+    lrs_wsd = []
+    for step in range(10000):
+        lrs_wsd.append(wsd.get_lr()[0])
+        wsd.step()
+    
+    print(f"   Initial LR (step 0): {lrs_wsd[0]:.6f}")
+    print(f"   After warmup (step 500): {lrs_wsd[500]:.6f}")
+    print(f"   During stable (step 3000): {lrs_wsd[3000]:.6f}")
+    print(f"   After stable (step 5000): {lrs_wsd[5000]:.6f}")
+    print(f"   Final LR (step 9999): {lrs_wsd[9999]:.6f}")
+    assert lrs_wsd[500] == lrs_wsd[3000], "Stable phase not working!"
+    assert lrs_wsd[5000] > lrs_wsd[9999], "Decay not working!"
+    print(f"   ✅ WSDScheduler working!")
+    
+    # Test SchedulerFactory
+    print("\n2. Testing SchedulerFactory...")
+    
+    config_wsd = SchedulerConfig(
+        scheduler_type='wsd',
+        warmup_steps=500,
+        stable_steps=4500,
+        max_steps=10000,
+        min_lr=1e-5
+    )
+    sched_wsd = SchedulerFactory.create(optimizer, config_wsd)
+    print(f"   WSD created: {type(sched_wsd).__name__}")
+    
+    config_cosine = SchedulerConfig(
+        scheduler_type='cosine',
+        warmup_steps=1000,
+        max_steps=10000,
         min_lr=1e-6
     )
+    sched_cosine = SchedulerFactory.create(optimizer, config_cosine)
+    print(f"   Cosine created: {type(sched_cosine).__name__}")
     
-    lrs = []
-    for step in range(1000):
-        lrs.append(scheduler.get_lr()[0])
-        scheduler.step()
+    print(f"   ✅ SchedulerFactory working!")
     
-    print(f"   Initial LR (step 0): {lrs[0]:.6f}")
-    print(f"   LR after warmup (step 100): {lrs[100]:.6f}")
-    print(f"   Final LR (step 999): {lrs[999]:.6f}")
-    assert lrs[0] < lrs[100], "Warmup not working!"
-    assert lrs[100] > lrs[999], "Decay not working!"
-    print(f"   ✅ CosineWarmupScheduler working!")
-    
-    # Test CosineWarmupWithRestarts
-    print("\n2. Testing CosineWarmupWithRestarts...")
-    optimizer2 = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler2 = CosineWarmupWithRestarts(
-        optimizer2,
-        warmup_steps=50,
-        first_cycle_steps=200,
-        cycle_mult=1.5,
-        min_lr=1e-6
-    )
-    
-    lrs2 = []
-    for step in range(500):
-        lrs2.append(scheduler2.get_lr()[0])
-        scheduler2.step()
-    
-    # Check for restart (LR should increase after first cycle)
-    assert lrs2[200] < lrs2[201], "Restart not working!"
-    print(f"   LR before restart (step 200): {lrs2[200]:.6f}")
-    print(f"   LR after restart (step 201): {lrs2[201]:.6f}")
-    print(f"   ✅ CosineWarmupWithRestarts working!")
-    
-    # Test LinearWarmupScheduler
-    print("\n3. Testing LinearWarmupScheduler...")
-    optimizer3 = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler3 = LinearWarmupScheduler(
-        optimizer3,
-        warmup_steps=100
-    )
-    
-    lrs3 = []
-    for step in range(200):
-        lrs3.append(scheduler3.get_lr()[0])
-        scheduler3.step()
-    
-    print(f"   LR at step 50: {lrs3[50]:.6f}")
-    print(f"   LR at step 100: {lrs3[100]:.6f}")
-    print(f"   LR at step 150: {lrs3[150]:.6f}")
-    assert abs(lrs3[100] - lrs3[150]) < 1e-9, "Not constant after warmup!"
-    print(f"   ✅ LinearWarmupScheduler working!")
-    
-    # Test PolynomialDecayScheduler
-    print("\n4. Testing PolynomialDecayScheduler...")
-    optimizer4 = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler4 = PolynomialDecayScheduler(
-        optimizer4,
-        warmup_steps=100,
-        max_steps=1000,
-        min_lr=1e-6,
-        power=2.0
-    )
-    
-    lrs4 = []
-    for step in range(1000):
-        lrs4.append(scheduler4.get_lr()[0])
-        scheduler4.step()
-    
-    print(f"   LR at step 100: {lrs4[100]:.6f}")
-    print(f"   LR at step 500: {lrs4[500]:.6f}")
-    print(f"   LR at step 999: {lrs4[999]:.6f}")
-    print(f"   ✅ PolynomialDecayScheduler working!")
-    
-    # Test InverseSqrtScheduler
-    print("\n5. Testing InverseSqrtScheduler...")
-    optimizer5 = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler5 = InverseSqrtScheduler(
-        optimizer5,
-        warmup_steps=100
-    )
-    
-    lrs5 = []
-    for step in range(500):
-        lrs5.append(scheduler5.get_lr()[0])
-        scheduler5.step()
-    
-    print(f"   LR at step 50: {lrs5[50]:.6f}")
-    print(f"   LR at step 100: {lrs5[100]:.6f}")
-    print(f"   LR at step 400: {lrs5[400]:.6f}")
-    print(f"   ✅ InverseSqrtScheduler working!")
-    
-    # Test create_scheduler factory
-    print("\n6. Testing create_scheduler factory...")
-    optimizer6 = torch.optim.Adam(model.parameters(), lr=0.001)
-    
-    sched_cosine = create_scheduler(optimizer6, 'cosine', 100, 1000)
-    sched_linear = create_scheduler(optimizer6, 'linear', 100)
-    sched_poly = create_scheduler(optimizer6, 'polynomial', 100, 1000, power=2.0)
-    
-    print(f"   Cosine: {type(sched_cosine).__name__}")
-    print(f"   Linear: {type(sched_linear).__name__}")
-    print(f"   Polynomial: {type(sched_poly).__name__}")
-    print(f"   ✅ Scheduler factory working!")
+    # Test from dict
+    print("\n3. Testing create_from_dict...")
+    config_dict = {
+        'scheduler_type': 'wsd',
+        'warmup_steps': 500,
+        'max_steps': 10000,
+        'min_lr': 1e-5
+    }
+    sched_dict = SchedulerFactory.create_from_dict(optimizer, config_dict)
+    print(f"   Created from dict: {type(sched_dict).__name__}")
+    print(f"   ✅ create_from_dict working!")
     
     # Test get_scheduler_info
-    print("\n7. Testing get_scheduler_info...")
-    info = get_scheduler_info(scheduler)
-    
+    print("\n4. Testing get_scheduler_info...")
+    info = get_scheduler_info(wsd)
     print(f"   Type: {info['type']}")
-    print(f"   Warmup steps: {info['warmup_steps']}")
+    print(f"   Warmup: {info['warmup_steps']}")
+    print(f"   Stable: {info['stable_steps']}")
     print(f"   Max steps: {info['max_steps']}")
-    print(f"   Min LR: {info['min_lr']}")
     print(f"   ✅ Scheduler info working!")
     
-    # Test plot_schedule (if matplotlib available)
-    print("\n8. Testing plot_schedule...")
+    # Test edge cases
+    print("\n5. Testing edge cases...")
     try:
-        import matplotlib
-        matplotlib.use('Agg')  # Non-interactive backend
-        plot_schedule(scheduler, num_steps=1000)
-        print(f"   ✅ Plot schedule working!")
-    except ImportError:
-        print(f"   ⚠️  Matplotlib not available, skipping plot test")
+        bad_config = SchedulerConfig(
+            scheduler_type='cosine',
+            warmup_steps=10000,
+            max_steps=10000  # Equal to warmup!
+        )
+        SchedulerFactory.create(optimizer, bad_config)
+        print(f"   ❌ Should have raised error!")
+    except ValueError as e:
+        print(f"   ✅ Correctly caught error: {str(e)[:50]}...")
     
     print("\n" + "="*70)
     print("✅ All tests passed!")
     print("="*70)
-    print("\nModule ready for use. Import with:")
-    print("  from ramanujan.training.schedulers import CosineWarmupScheduler")
-    print("  from ramanujan.training.schedulers import create_scheduler")
+    print("\nUsage examples:")
+    print("  # Modern WSD schedule (recommended)")
+    print("  config = SchedulerConfig('wsd', 500, 10000, stable_steps=4500)")
+    print("  scheduler = SchedulerFactory.create(optimizer, config)")
+    print()
+    print("  # Classic cosine schedule")
+    print("  config = SchedulerConfig('cosine', 1000, 10000)")
+    print("  scheduler = SchedulerFactory.create(optimizer, config)")
     print("="*70)
