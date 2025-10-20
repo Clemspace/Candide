@@ -415,8 +415,8 @@ Effect of Ramanujan sparsity on 125M model:
 |-------|------|-----|-------|
 | GPT-2 Small | 3.43 | 30.9 | Baseline |
 | Pythia-70M | 3.39 | 29.7 | Dense |
-| **Candid-35M** | **3.25** | **25.8** | w/ improvements |
-| Candid-35M (sparse) | 3.41 | 30.2 | 80% sparse |
+| **Candide-35M** | **3.25** | **25.8** | w/ improvements |
+| Candide-35M (sparse) | 3.41 | 30.2 | 80% sparse |
 
 ---
 
@@ -525,8 +525,8 @@ We welcome contributions! Whether it's:
 
 ```bash
 # Clone your fork
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Install dev dependencies
 pip install -r requirements-dev.txt
@@ -548,12 +548,12 @@ We use:
 
 ```bash
 # Format code
-black candid/
-isort candid/
+black Candide/
+isort Candide/
 
 # Lint
-flake8 candid/
-mypy candid/
+flake8 Candide/
+mypy Candide/
 ```
 
 ---
@@ -591,14 +591,14 @@ mypy candid/
 
 ## 📖 Citation
 
-If you use Candid in your research, please cite:
+If you use Candide in your research, please cite:
 
 ```bibtex
-@software{candid2025,
-  title={Candid: A Transparent Framework for Efficient Language Model Training},
-  author={Your Name},
+@software{Candide2025,
+  title={Candide: A Transparent Framework for Efficient Language Model Training},
+  author={Clément Castellon},
   year={2025},
-  url={https://github.com/Clemspace/candid-llm}
+  url={https://github.com/Clemspace/Candide}
 }
 ```
 
@@ -625,7 +625,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```
 MIT License
 
-Copyright (c) 2025 Candid Contributors
+Copyright (c) 2025 Candide Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -638,16 +638,16 @@ copies of the Software...
 
 ## 🌐 Links
 
-- **Documentation**: [https://candid-llm.readthedocs.io](https://candid-llm.readthedocs.io)
-- **Issues**: [https://github.com/Clemspace/candid-llm/issues](https://github.com/Clemspace/candid-llm/issues)
-- **Discussions**: [https://github.com/Clemspace/candid-llm/discussions](https://github.com/Clemspace/candid-llm/discussions)
+- **Documentation**: [https://candid-llm.readthedocs.io](https://Candide.readthedocs.io)
+- **Issues**: [https://github.com/Clemspace/candid-llm/issues](https://github.com/Clemspace/Candide/issues)
+- **Discussions**: [https://github.com/Clemspace/candid-llm/discussions](https://github.com/Clemspace/Candide/discussions)
 - **Paper**: Coming soon!
 
 ---
 
 ## 💬 Contact
 
-- **Email**: your.email@example.com
+- **Email**: 
 - **Twitter**: [@Clemspace](https://twitter.com/Clemspace)
 
 ---
@@ -658,6 +658,6 @@ copies of the Software...
 
 ⭐ Star us on GitHub — it motivates us to keep improving!
 
-[Report Bug](https://github.com/Clemspace/candid-llm/issues) · [Request Feature](https://github.com/Clemspace/candid-llm/issues) · [Ask Question](https://github.com/Clemspace/candid-llm/discussions)
+[Report Bug](https://github.com/Clemspace/Candide/issues) · [Request Feature](https://github.com/Clemspace/Candide/issues) · [Ask Question](https://github.com/Clemspace/Candide/discussions)
 
 </div>
