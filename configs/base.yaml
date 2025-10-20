@@ -1,0 +1,87 @@
+# Base Configuration for Ramanujan Transformer
+# Small model for testing (~42M parameters)
+
+name: "base-test"
+description: "Base configuration for testing - small model with all features"
+tags:
+  - "test"
+  - "baseline"
+
+# Model Architecture
+model:
+  vocab_size: 31980  # Mistral tokenizer
+  dim: 512           # Model dimension
+  num_layers: 6      # Number of transformer blocks
+  num_heads: 8       # Number of query heads
+  num_kv_heads: 4    # Number of KV heads (50% KV cache reduction)
+  hidden_dim: 1536   # FFN hidden dim (~3x for SwiGLU)
+  max_seq_len: 512   # Maximum sequence length
+  dropout: 0.1       # Dropout probability
+  pad_token_id: 0
+  tie_embeddings: true
+  model_type: "enhanced"  # Use enhanced model with all features
+  ffn_type: "swiglu"
+  norm_type: "rms"
+
+# Sparsity Configuration
+sparsity:
+  attention_sparsity: 0.00  # 0% attention sparsity
+  ffn_sparsity: 0.00       # 88% FFN sparsity
+  max_prime: 1000
+  force_method: "lps"
+  use_sliding_window: true
+  window_size: 256          # Smaller window for testing
+  num_global_tokens: 32
+
+# Training Configuration
+training:
+  # Training steps
+  max_steps: 100000
+  batch_size: 8
+  gradient_accumulation_steps: 4  # Effective batch size: 32
+  
+  # Evaluation
+  eval_every: 500
+  eval_steps: 50
+  
+  # Logging
+  log_every: 10
+  save_every: 5000
+  
+  # Paths
+  output_dir: "outputs/base-test"
+  checkpoint_dir: "checkpoints/base-test"
+  log_dir: "logs/base-test"
+  
+  # Loss
+  loss_type: "semantic_entropy"  # Use semantic entropy loss
+  label_smoothing: 0.1
+  semantic_entropy_alpha: 0.1
+  
+  # Optimizer
+  optimizer_type: "adamw"
+  learning_rate: 0.0003 # 0.02 for muon, 0.0003 for adamw
+  weight_decay: 0.01
+  
+  # Scheduler
+  scheduler_type: "cosine"
+  warmup_steps: 10000
+  min_lr: 0.000001
+  
+  # Device
+  device: "cuda"  # Change to "cpu" if no GPU
+  mixed_precision: true  # Use AMP for faster training
+  
+  # Gradient clipping
+  max_grad_norm: 1.0
+  
+  # Reproducibility
+  seed: 42
+  
+  # Weights & Biases
+  use_wandb: true  # Set to true to enable W&B logging
+  wandb_project: "ramanujan-transformer"
+  wandb_run_name: "base-test"
+  
+  # Resume
+  resume_from_checkpoint: null  # Path to checkpoint to resume from
