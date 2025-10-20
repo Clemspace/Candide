@@ -1,16 +1,20 @@
 """
 Ramanujan architecture components.
+
+Modular design:
+- attention: Multi-head attention variants (GQA, MQA, etc.)
+- feedforward: FFN layers with sparsity
+- embeddings: Token and position embeddings
+- blocks: Transformer blocks
+- models: Complete model definitions
 """
 
-# Attention
 from .attention import (
     ImprovedGQA,
     ImprovedSlidingWindowGQA,
-    StandardGQA,
-    SlidingWindowGQA,
+
 )
 
-# Feedforward - use actual names
 from .feedforward import (
     SwiGLU,
     SparseRamanujanSwiGLU,
@@ -19,30 +23,40 @@ from .feedforward import (
     FeedForwardConfig,
 )
 
-# Embeddings (optional)
-try:
-    from .embeddings import RotaryEmbedding, create_embeddings
-except ImportError:
-    RotaryEmbedding = create_embeddings = None
+from .embeddings import (
+    RotaryEmbedding,
+    SinusoidalEmbedding,
+    LearnedPositionEmbedding,
+    create_position_embedding
+)
 
-# Blocks (optional)
-try:
-    from .blocks import TransformerBlock, create_transformer_block
-except ImportError:
-    TransformerBlock = create_transformer_block = None
+from .blocks import (
+    EnhancedPretrainingBlock,
+    PostNormTransformerBlock,
+    TransformerBlock,
+    BlockFactory,
+    BlockConfig,
+)
 
-# Models (optional)
-try:
-    from .models import EnhancedPretrainingModel, create_model
-except ImportError:
-    EnhancedPretrainingModel = create_model = None
+from .model import (
+    EnhancedPretrainingModel,
+    create_model,
+    StandardModel,
+    BaselineModel,
+    ModelConfig,
+    count_parameters,
+    estimate_model_memory,
+    compare_models,
+    save_checkpoint,
+    save_model,
+    load_model,
+)
 
 __all__ = [
     # Attention
     'ImprovedGQA',
     'ImprovedSlidingWindowGQA',
-    'StandardGQA',
-    'SlidingWindowGQA',
+
     
     # Feedforward
     'SwiGLU',
@@ -53,13 +67,19 @@ __all__ = [
     
     # Embeddings
     'RotaryEmbedding',
-    'create_embeddings',
+    'SinusoidalEmbedding',
+    'LearnedPositionEmbedding',
+    'create_position_embedding',
     
     # Blocks
     'TransformerBlock',
+    'BlockFactory',
+    'BlockConfig',
+    'EnhancedPretrainingBlock',
+    'PostNormTransformerBlock',
     'create_transformer_block',
     
     # Models
     'EnhancedPretrainingModel',
-    'create_model',
+    'create_model', 'StandardModel', 'BaselineModel', 'ModelConfig', 'create_model_from_dict', 'count_parameters', 'estimate_model_memory', 'compare_models', 'save_checkpoint', 'save_model', 'load_model',
 ]

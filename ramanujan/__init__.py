@@ -19,8 +19,6 @@ from .foundation import (
 # Architecture
 from .architecture import (
     # Attention
-    StandardGQA,
-    SlidingWindowGQA,
     ImprovedGQA,
     ImprovedSlidingWindowGQA,
     
@@ -29,7 +27,14 @@ from .architecture import (
     SparseRamanujanSwiGLU,
     StandardFFN,
     FeedForwardFactory,
+
+    # Embeddings
+    RotaryEmbedding,
+    SinusoidalEmbedding,
+    LearnedPositionEmbedding,
+    create_position_embedding,
 )
+
 
 # Flow analysis
 from .flow import (
@@ -76,8 +81,6 @@ __all__ = [
     'RamanujanMath',
     
     # Architecture - Attention
-    'StandardGQA',
-    'SlidingWindowGQA',
     'ImprovedGQA',
     'ImprovedSlidingWindowGQA',
     
@@ -86,6 +89,12 @@ __all__ = [
     'SparseRamanujanSwiGLU',
     'StandardFFN',
     'FeedForwardFactory',
+
+    # Architecture - Embeddings
+    'RotaryEmbedding',
+    'SinusoidalEmbedding',
+    'LearnedPositionEmbedding',
+    'create_position_embedding',
     
     # Flow - Geometry
     'FlowTrajectoryComputer',
