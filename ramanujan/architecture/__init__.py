@@ -1,80 +1,65 @@
 """
-Architecture: Neural network components with Ramanujan sparsity.
-
-This module provides transformer architecture components that can optionally
-use Ramanujan graph sparsity for efficiency.
-
-Components:
-- Attention mechanisms (GQA, sliding window, sparse)
-- Feedforward networks (SwiGLU, MoE)
-- Normalization layers (RMSNorm, QKNorm)
-- Transformer blocks
-- Complete models
-
-Example:
-    >>> from ramanujan.architecture import create_model
-    >>> from ramanujan.utils import ModelConfig
-    >>> 
-    >>> config = ModelConfig(dim=890, num_layers=6, num_heads=10)
-    >>> model = create_model(config)
+Ramanujan architecture components.
 """
 
-# Import components
+# Attention
 from .attention import (
+    ImprovedGQA,
+    ImprovedSlidingWindowGQA,
     StandardGQA,
     SlidingWindowGQA,
-    SparseRamanujanGQA,
-    AttentionFactory,
-    RotaryPositionalEmbedding,
-    apply_rotary_emb
 )
 
+# Feedforward - use actual names
 from .feedforward import (
     SwiGLU,
     SparseRamanujanSwiGLU,
-    FeedForwardFactory
+    StandardFFN,
+    FeedForwardFactory,
+    FeedForwardConfig,
 )
 
-from .normalization import (
-    RMSNorm,
-    QKNorm
-)
+# Embeddings (optional)
+try:
+    from .embeddings import RotaryEmbedding, create_embeddings
+except ImportError:
+    RotaryEmbedding = create_embeddings = None
 
-from .blocks import (
-    TransformerBlock,
-    EnhancedPretrainingBlock
-)
+# Blocks (optional)
+try:
+    from .blocks import TransformerBlock, create_transformer_block
+except ImportError:
+    TransformerBlock = create_transformer_block = None
 
-from .model import (
-    create_model,
-    EnhancedPretrainingModel,
-    StandardModel
-)
+# Models (optional)
+try:
+    from .models import EnhancedPretrainingModel, create_model
+except ImportError:
+    EnhancedPretrainingModel = create_model = None
 
 __all__ = [
     # Attention
+    'ImprovedGQA',
+    'ImprovedSlidingWindowGQA',
     'StandardGQA',
     'SlidingWindowGQA',
-    'SparseRamanujanGQA',
-    'AttentionFactory',
-    'RotaryPositionalEmbedding',
-    'apply_rotary_emb',
     
     # Feedforward
     'SwiGLU',
     'SparseRamanujanSwiGLU',
+    'StandardFFN',
     'FeedForwardFactory',
+    'FeedForwardConfig',
     
-    # Normalization
-    'RMSNorm',
-    'QKNorm',
+    # Embeddings
+    'RotaryEmbedding',
+    'create_embeddings',
     
     # Blocks
     'TransformerBlock',
-    'EnhancedPretrainingBlock',
+    'create_transformer_block',
     
     # Models
-    'create_model',
     'EnhancedPretrainingModel',
-    'StandardModel',
+    'create_model',
 ]
