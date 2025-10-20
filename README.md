@@ -203,16 +203,16 @@ Token Embeddings (SafeEmbedding with vocab clamping)
     ↓
 ┌─────────────────────────────────┐
 │  Transformer Block × N          │
-│  ┌─────────────────────────┐   │
-│  │ RMSNorm                 │   │
-│  │ Attention (GQA + RoPE)  │   │
-│  │ Residual Connection     │   │
-│  └─────────────────────────┘   │
-│  ┌─────────────────────────┐   │
-│  │ RMSNorm                 │   │
-│  │ FFN (SwiGLU)            │   │
-│  │ Residual Connection     │   │
-│  └─────────────────────────┘   │
+│  ┌─────────────────────────┐    │
+│  │ RMSNorm                 │    │
+│  │ Attention (GQA + RoPE)  │    │
+│  │ Residual Connection     │    │
+│  └─────────────────────────┘    │
+│  ┌─────────────────────────┐    │
+│  │ RMSNorm                 │    │
+│  │ FFN (SwiGLU)            │    │
+│  │ Residual Connection     │    │
+│  └─────────────────────────┘    │
 └─────────────────────────────────┘
     ↓
 Final RMSNorm
