@@ -1,27 +1,15 @@
 """
 Ramanujan Transformer: Efficient sparse transformers using Ramanujan graph theory.
-
-Main components:
-- foundation: Ramanujan graph construction and sparse layers
-- architecture: Model components (attention, FFN, blocks)
-- training: Training utilities (losses, optimizers, trainer)
-- data: Dataset loaders and preprocessing
-- utils: Configuration, metrics, logging
-
-Example usage:
-    >>> from ramanujan import RamanujanFoundation, create_model, Trainer
-    >>> from ramanujan.utils import load_config
-    >>> 
-    >>> config = load_config("configs/optimal.yaml")
-    >>> model = create_model(config)
-    >>> trainer = Trainer(model, config, train_loader, eval_loader)
-    >>> trainer.train()
 """
 
 __version__ = "0.1.0"
 __author__ = "Clément Castellon"
 
-# Core foundation
+# ============================================================================
+# CORE IMPORTS
+# ============================================================================
+
+# Foundation
 from .foundation import (
     RamanujanFoundation,
     RamanujanLinearLayer,
@@ -30,25 +18,56 @@ from .foundation import (
 
 # Architecture
 from .architecture import (
-    create_model,
-    TransformerBlock,
-    EnhancedPretrainingModel
+    # Attention
+    StandardGQA,
+    SlidingWindowGQA,
+    ImprovedGQA,
+    ImprovedSlidingWindowGQA,
+    
+    # Feedforward
+    SwiGLU,
+    SparseRamanujanSwiGLU,
+    StandardFFN,
+    FeedForwardFactory,
 )
 
-# Training
-from .training import (
-    Trainer,
-    SemanticEntropyLoss,
-    create_optimizer,
-    CosineWarmupScheduler
+# Flow analysis
+from .flow import (
+    # Geometry
+    FlowTrajectoryComputer,
+    GeometricMetrics,
+    FlowAnalyzer,
+    quick_curvature,
+    quick_compare,
+    
+    # Visualization
+    FlowVisualizer,
+    quick_plot_trajectory,
+    quick_plot_curvature,
 )
 
-# Utils
-from .utils import (
-    load_config,
-    ExperimentConfig,
-    compute_sparsity_stats
-)
+# ============================================================================
+# OPTIONAL IMPORTS
+# ============================================================================
+
+try:
+    from .architecture import TransformerBlock, EnhancedPretrainingModel, create_model
+except ImportError:
+    TransformerBlock = EnhancedPretrainingModel = create_model = None
+
+try:
+    from .training import Trainer, SemanticEntropyLoss, create_optimizer, CosineWarmupScheduler
+except ImportError:
+    Trainer = SemanticEntropyLoss = create_optimizer = CosineWarmupScheduler = None
+
+try:
+    from .utils import load_config, ExperimentConfig, compute_sparsity_stats
+except ImportError:
+    load_config = ExperimentConfig = compute_sparsity_stats = None
+
+# ============================================================================
+# EXPORTS
+# ============================================================================
 
 __all__ = [
     # Foundation
@@ -56,19 +75,35 @@ __all__ = [
     'RamanujanLinearLayer',
     'RamanujanMath',
     
-    # Architecture
-    'create_model',
-    'TransformerBlock',
-    'EnhancedPretrainingModel',
+    # Architecture - Attention
+    'StandardGQA',
+    'SlidingWindowGQA',
+    'ImprovedGQA',
+    'ImprovedSlidingWindowGQA',
     
-    # Training
-    'Trainer',
-    'SemanticEntropyLoss',
-    'create_optimizer',
-    'CosineWarmupScheduler',
+    # Architecture - Feedforward
+    'SwiGLU',
+    'SparseRamanujanSwiGLU',
+    'StandardFFN',
+    'FeedForwardFactory',
     
-    # Utils
-    'load_config',
-    'ExperimentConfig',
-    'compute_sparsity_stats',
+    # Flow - Geometry
+    'FlowTrajectoryComputer',
+    'GeometricMetrics',
+    'FlowAnalyzer',
+    'quick_curvature',
+    'quick_compare',
+    
+    # Flow - Visualization
+    'FlowVisualizer',
+    'quick_plot_trajectory',
+    'quick_plot_curvature',
 ]
+
+# Add optional exports if available
+if TransformerBlock is not None:
+    __all__.extend(['TransformerBlock', 'EnhancedPretrainingModel', 'create_model'])
+if Trainer is not None:
+    __all__.extend(['Trainer', 'SemanticEntropyLoss', 'create_optimizer', 'CosineWarmupScheduler'])
+if load_config is not None:
+    __all__.extend(['load_config', 'ExperimentConfig', 'compute_sparsity_stats'])
