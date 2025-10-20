@@ -1,11 +1,11 @@
-# 🎯 Candid - A Transparent LLM Builder
+# 🎯 Candide - A Transparent LLM Builder
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> **Candid**: *frank, straightforward, and honest.* Build language models with transparency and mathematical rigor.
+> **Candide**: *frank, straightforward, and honest.* Build language models with transparency and mathematical rigor.
 
 A research-focused framework for training efficient transformer language models with novel architectural innovations:
 - 🔢 **Ramanujan Graph Sparsity**: Number theory-based structured pruning
@@ -15,9 +15,9 @@ A research-focused framework for training efficient transformer language models 
 
 ---
 
-## 🌟 Why Candid?
+## 🌟 Why Candide?
 
-Most LLM frameworks hide complexity behind abstractions. **Candid takes the opposite approach:**
+Most LLM frameworks hide complexity behind abstractions. **Candide takes the opposite approach:**
 
 - ✅ **Transparent**: Every architectural choice is documented and justified
 - ✅ **Educational**: Learn by reading clean, well-commented code
@@ -101,8 +101,8 @@ Most LLM frameworks hide complexity behind abstractions. **Candid takes the oppo
 
 ```bash
 # Clone the repository
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Install dependencies
 pip install -r requirements.txt
@@ -117,8 +117,8 @@ python scripts/train.py --config configs/base.yaml --wandb
 ### Inference Example
 
 ```python
-from candid.architecture import create_model, ModelConfig
-from candid.utils import load_checkpoint
+from ramanujan.architecture import create_model, ModelConfig
+from ramanujan.utils import load_checkpoint
 
 # Create model
 config = ModelConfig(
@@ -134,7 +134,7 @@ model = create_model(config)
 load_checkpoint(model, 'checkpoints/best.pt')
 
 # Generate text
-from candid.inference import generate
+from ramanujan.inference import generate
 
 text = generate(
     model,
@@ -162,8 +162,8 @@ print(text)
 
 ```bash
 # Clone repository
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Create virtual environment
 python -m venv venv
@@ -175,8 +175,6 @@ pip install -r requirements.txt
 # Install in development mode
 pip install -e .
 
-# Verify installation
-python -c "import candid; print(candid.__version__)"
 ```
 
 ### Optional Dependencies
@@ -231,7 +229,7 @@ Logits → Loss
 Uses coprime relationships from number theory to create structured sparse networks:
 
 ```python
-from candid.foundation import RamanujanFoundation
+from ramanujan.foundation import RamanujanFoundation
 
 foundation = RamanujanFoundation(max_prime=1000)
 sparse_layer = foundation.create_layer(
@@ -425,8 +423,8 @@ Effect of Ramanujan sparsity on 125M model:
 ## 📁 Project Structure
 
 ```
-candid-llm/
-├── candid/                      # Main package
+Candide/
+├── Ramanujan/                      # Main package
 │   ├── __init__.py
 │   ├── architecture/           # Model architectures
 │   │   ├── __init__.py
