@@ -40,7 +40,8 @@ from pathlib import Path
 
 from .losses import create_loss, LossTracker, compute_perplexity, compute_bits_per_byte
 from .optimizers import create_optimizer, clip_grad_norm
-from .schedulers import create_scheduler
+from .schedulers import SchedulerFactory, SchedulerConfig
+
 
 
 # ============================================================================
@@ -71,7 +72,7 @@ class TrainingConfig:
     log_dir: str = "logs"
     
     # Loss
-    loss_type: str = 'ce'  # 'ce' or 'semantic_entropy'
+    loss_type: str = 'semantic_entropy'  # 'ce' or 'semantic_entropy'
     label_smoothing: float = 0.0
     semantic_entropy_alpha: float = 0.1
     
@@ -80,10 +81,22 @@ class TrainingConfig:
     learning_rate: float = 0.0003
     weight_decay: float = 0.01
     
+
     # Scheduler
     scheduler_type: str = 'cosine'
     warmup_steps: int = 1000
     min_lr: float = 0.0
+    
+    # WSD-specific
+    stable_steps: Optional[int] = None  # For WSD scheduler
+    
+    # Restart-specific (optional, for future)
+    first_cycle_steps: Optional[int] = None
+    cycle_mult: float = 1.0
+    max_lr_decay: float = 1.0
+    
+    # Polynomial-specific (optional, for future)
+    power: float = 1.0
     
     # Device
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -239,7 +252,7 @@ class Trainer:
             attention_mask = attention_mask.to(self.device)
         
         # Forward pass
-        with torch.cuda.amp.autocast(enabled=self.config.mixed_precision):
+        with torch.autocast(device_type=self.device.type, enabled=self.config.mixed_precision):
             # Get model outputs
             if hasattr(self.model, 'forward') and 'return_hidden_states' in self.model.forward.__code__.co_varnames:
                 logits, hidden_states = self.model(

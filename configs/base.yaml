@@ -36,7 +36,7 @@ sparsity:
 # Training Configuration
 training:
   # Training steps
-  max_steps: 100000
+  max_steps: 10000
   batch_size: 8
   gradient_accumulation_steps: 4  # Effective batch size: 32
   
@@ -64,9 +64,11 @@ training:
   weight_decay: 0.01
   
   # Scheduler
-  scheduler_type: "cosine"
-  warmup_steps: 10000
-  min_lr: 0.000001
+  scheduler_type: "wsd"  # ← Use WSD instead of cosine
+  warmup_steps: 500      # 5% of max_steps
+  stable_steps: 4500     # 45% of max_steps (auto-computed if omitted)
+  max_steps: 10000
+  min_lr: 0.00003        # 10% of max_lr
   
   # Device
   device: "cuda"  # Change to "cpu" if no GPU
