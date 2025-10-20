@@ -1,11 +1,11 @@
-# 🎯 Candid - A Transparent LLM Builder
+# 🎯 Candide - A Transparent LLM Builder
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.0+](https://img.shields.io/badge/pytorch-2.0+-red.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-> **Candid**: *frank, straightforward, and honest.* Build language models with transparency and mathematical rigor.
+> **Candide**: *frank, straightforward, and honest.* Build language models with transparency and mathematical rigor.
 
 A research-focused framework for training efficient transformer language models with novel architectural innovations:
 - 🔢 **Ramanujan Graph Sparsity**: Number theory-based structured pruning
@@ -15,9 +15,9 @@ A research-focused framework for training efficient transformer language models 
 
 ---
 
-## 🌟 Why Candid?
+## 🌟 Why Candide?
 
-Most LLM frameworks hide complexity behind abstractions. **Candid takes the opposite approach:**
+Most LLM frameworks hide complexity behind abstractions. **Candide takes the opposite approach:**
 
 - ✅ **Transparent**: Every architectural choice is documented and justified
 - ✅ **Educational**: Learn by reading clean, well-commented code
@@ -101,8 +101,8 @@ Most LLM frameworks hide complexity behind abstractions. **Candid takes the oppo
 
 ```bash
 # Clone the repository
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Install dependencies
 pip install -r requirements.txt
@@ -117,8 +117,8 @@ python scripts/train.py --config configs/base.yaml --wandb
 ### Inference Example
 
 ```python
-from candid.architecture import create_model, ModelConfig
-from candid.utils import load_checkpoint
+from ramanujan.architecture import create_model, ModelConfig
+from ramanujan.utils import load_checkpoint
 
 # Create model
 config = ModelConfig(
@@ -134,7 +134,7 @@ model = create_model(config)
 load_checkpoint(model, 'checkpoints/best.pt')
 
 # Generate text
-from candid.inference import generate
+from ramanujan.inference import generate
 
 text = generate(
     model,
@@ -162,8 +162,8 @@ print(text)
 
 ```bash
 # Clone repository
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Create virtual environment
 python -m venv venv
@@ -175,8 +175,6 @@ pip install -r requirements.txt
 # Install in development mode
 pip install -e .
 
-# Verify installation
-python -c "import candid; print(candid.__version__)"
 ```
 
 ### Optional Dependencies
@@ -205,16 +203,16 @@ Token Embeddings (SafeEmbedding with vocab clamping)
     ↓
 ┌─────────────────────────────────┐
 │  Transformer Block × N          │
-│  ┌─────────────────────────┐   │
-│  │ RMSNorm                 │   │
-│  │ Attention (GQA + RoPE)  │   │
-│  │ Residual Connection     │   │
-│  └─────────────────────────┘   │
-│  ┌─────────────────────────┐   │
-│  │ RMSNorm                 │   │
-│  │ FFN (SwiGLU)            │   │
-│  │ Residual Connection     │   │
-│  └─────────────────────────┘   │
+│  ┌─────────────────────────┐    │
+│  │ RMSNorm                 │    │
+│  │ Attention (GQA + RoPE)  │    │
+│  │ Residual Connection     │    │
+│  └─────────────────────────┘    │
+│  ┌─────────────────────────┐    │
+│  │ RMSNorm                 │    │
+│  │ FFN (SwiGLU)            │    │
+│  │ Residual Connection     │    │
+│  └─────────────────────────┘    │
 └─────────────────────────────────┘
     ↓
 Final RMSNorm
@@ -231,7 +229,7 @@ Logits → Loss
 Uses coprime relationships from number theory to create structured sparse networks:
 
 ```python
-from candid.foundation import RamanujanFoundation
+from ramanujan.foundation import RamanujanFoundation
 
 foundation = RamanujanFoundation(max_prime=1000)
 sparse_layer = foundation.create_layer(
@@ -417,16 +415,16 @@ Effect of Ramanujan sparsity on 125M model:
 |-------|------|-----|-------|
 | GPT-2 Small | 3.43 | 30.9 | Baseline |
 | Pythia-70M | 3.39 | 29.7 | Dense |
-| **Candid-35M** | **3.25** | **25.8** | w/ improvements |
-| Candid-35M (sparse) | 3.41 | 30.2 | 80% sparse |
+| **Candide-35M** | **3.25** | **25.8** | w/ improvements |
+| Candide-35M (sparse) | 3.41 | 30.2 | 80% sparse |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-candid-llm/
-├── candid/                      # Main package
+Candide/
+├── Ramanujan/                      # Main package
 │   ├── __init__.py
 │   ├── architecture/           # Model architectures
 │   │   ├── __init__.py
@@ -527,8 +525,8 @@ We welcome contributions! Whether it's:
 
 ```bash
 # Clone your fork
-git clone https://github.com/Clemspace/candid-llm.git
-cd candid-llm
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
 
 # Install dev dependencies
 pip install -r requirements-dev.txt
@@ -550,12 +548,12 @@ We use:
 
 ```bash
 # Format code
-black candid/
-isort candid/
+black Candide/
+isort Candide/
 
 # Lint
-flake8 candid/
-mypy candid/
+flake8 Candide/
+mypy Candide/
 ```
 
 ---
@@ -593,14 +591,14 @@ mypy candid/
 
 ## 📖 Citation
 
-If you use Candid in your research, please cite:
+If you use Candide in your research, please cite:
 
 ```bibtex
-@software{candid2025,
-  title={Candid: A Transparent Framework for Efficient Language Model Training},
-  author={Your Name},
+@software{Candide2025,
+  title={Candide: A Transparent Framework for Efficient Language Model Training},
+  author={Clément Castellon},
   year={2025},
-  url={https://github.com/Clemspace/candid-llm}
+  url={https://github.com/Clemspace/Candide}
 }
 ```
 
@@ -627,7 +625,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```
 MIT License
 
-Copyright (c) 2025 Candid Contributors
+Copyright (c) 2025 Candide Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -640,16 +638,16 @@ copies of the Software...
 
 ## 🌐 Links
 
-- **Documentation**: [https://candid-llm.readthedocs.io](https://candid-llm.readthedocs.io)
-- **Issues**: [https://github.com/Clemspace/candid-llm/issues](https://github.com/Clemspace/candid-llm/issues)
-- **Discussions**: [https://github.com/Clemspace/candid-llm/discussions](https://github.com/Clemspace/candid-llm/discussions)
+- **Documentation**: [https://candid-llm.readthedocs.io](https://Candide.readthedocs.io)
+- **Issues**: [https://github.com/Clemspace/candid-llm/issues](https://github.com/Clemspace/Candide/issues)
+- **Discussions**: [https://github.com/Clemspace/candid-llm/discussions](https://github.com/Clemspace/Candide/discussions)
 - **Paper**: Coming soon!
 
 ---
 
 ## 💬 Contact
 
-- **Email**: your.email@example.com
+- **Email**: 
 - **Twitter**: [@Clemspace](https://twitter.com/Clemspace)
 
 ---
@@ -660,6 +658,6 @@ copies of the Software...
 
 ⭐ Star us on GitHub — it motivates us to keep improving!
 
-[Report Bug](https://github.com/Clemspace/candid-llm/issues) · [Request Feature](https://github.com/Clemspace/candid-llm/issues) · [Ask Question](https://github.com/Clemspace/candid-llm/discussions)
+[Report Bug](https://github.com/Clemspace/Candide/issues) · [Request Feature](https://github.com/Clemspace/Candide/issues) · [Ask Question](https://github.com/Clemspace/Candide/discussions)
 
 </div>
