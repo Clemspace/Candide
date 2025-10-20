@@ -10,137 +10,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional, Tuple
+from .normalization import QKNorm
+from .embeddings import (
+    precompute_freqs_cis,
+    apply_rotary_emb,
+)
 
-
-# ============================================================================
-# ROTARY POSITION EMBEDDINGS (Complex Number Formulation)
-# ============================================================================
-
-def precompute_freqs_cis(
-    dim: int,
-    end: int,
-    theta: float = 10000.0,
-    device: Optional[torch.device] = None
-) -> torch.Tensor:
-    """
-    Precompute complex frequencies for RoPE (Llama style).
-    
-    This is more efficient than sin/cos formulation as it uses
-    complex multiplication instead of separate rotations.
-    
-    Args:
-        dim: Dimension of embeddings (head_dim)
-        end: Maximum sequence length
-        theta: Base for frequency computation (default: 10000.0)
-        device: Device for tensor
-    
-    Returns:
-        freqs_cis: Complex tensor [end, dim//2] for rotations
-    
-    Example:
-        >>> freqs_cis = precompute_freqs_cis(dim=64, end=2048)
-        >>> print(freqs_cis.shape)  # [2048, 32]
-    """
-    # Compute inverse frequencies: 1 / (theta^(2i/dim)) for i in [0, dim/2)
-    freqs = 1.0 / (
-        theta ** (torch.arange(0, dim, 2, device=device)[: (dim // 2)].float() / dim)
-    )
-    
-    # Create position indices
-    t = torch.arange(end, device=freqs.device, dtype=torch.float32)
-    
-    # Outer product: [end, dim//2]
-    freqs = torch.outer(t, freqs).float()
-    
-    # Convert to complex: e^(i*theta) = cos(theta) + i*sin(theta)
-    freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64
-    
-    return freqs_cis
-
-
-def apply_rotary_emb(
-    xq: torch.Tensor,
-    xk: torch.Tensor,
-    freqs_cis: torch.Tensor,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Apply rotary embeddings using complex number multiplication.
-    
-    More efficient than sin/cos formulation. Handles dimension
-    reshaping automatically.
-    
-    Args:
-        xq: Query tensor [..., seq_len, dim]
-        xk: Key tensor [..., seq_len, dim]
-        freqs_cis: Precomputed frequencies [seq_len, dim//2]
-    
-    Returns:
-        Tuple of (rotated_q, rotated_k)
-    
-    Example:
-        >>> freqs_cis = precompute_freqs_cis(dim=64, end=128)
-        >>> q = torch.randn(2, 8, 128, 64)  # [batch, heads, seq, dim]
-        >>> k = torch.randn(2, 8, 128, 64)
-        >>> q_rot, k_rot = apply_rotary_emb(q, k, freqs_cis)
-    """
-    # Reshape last dimension to pairs: [..., seq_len, dim] -> [..., seq_len, dim//2, 2]
-    xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
-    xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
-    # Now: [..., seq_len, dim//2] as complex numbers
-    
-    # Reshape freqs_cis to match: [seq_len, dim//2] -> [seq_len, 1, dim//2]
-    # This broadcasts correctly with [..., heads, seq_len, dim//2]
-    freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
-    
-    # Complex multiplication (rotation)
-    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(-2)
-    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(-2)
-    
-    # Return with original dtype
-    return xq_out.type_as(xq), xk_out.type_as(xk)
-
-
-def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-    """
-    Reshape frequency tensor to broadcast with input tensor.
-    
-    Args:
-        freqs_cis: [seq_len, dim//2]
-        x: [..., seq_len, dim//2]
-    
-    Returns:
-        Reshaped freqs_cis that broadcasts correctly
-    """
-    ndim = x.ndim
-    assert 0 <= 1 < ndim
-    assert freqs_cis.shape == (x.shape[-2], x.shape[-1]), \
-        f"freqs_cis shape {freqs_cis.shape} doesn't match x shape {x.shape}"
-    
-    # Create shape with 1s for all dimensions except seq_len and feature
-    shape = [d if i >= ndim - 2 else 1 for i, d in enumerate(x.shape)]
-    return freqs_cis.view(*shape)
-
-
-# ============================================================================
-# QK NORMALIZATION
-# ============================================================================
-
-class QKNorm(nn.Module):
-    """
-    Query-Key Normalization for attention stability.
-    
-    Uses RMS normalization (more efficient than LayerNorm).
-    """
-    
-    def __init__(self, dim: int, eps: float = 1e-6):
-        super().__init__()
-        self.eps = eps
-        self.scale = nn.Parameter(torch.ones(dim))
-    
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Apply RMS normalization."""
-        norm = x.pow(2).mean(-1, keepdim=True).sqrt() + self.eps
-        return self.scale * x / norm
 
 
 # ============================================================================
@@ -568,3 +443,5 @@ if __name__ == "__main__":
     print("Replace your StandardGQA and SlidingWindowGQA imports")
     print("with ImprovedGQA and ImprovedSlidingWindowGQA")
     print("="*70)
+
+
