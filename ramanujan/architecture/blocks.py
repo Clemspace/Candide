@@ -45,12 +45,14 @@ import torch.nn as nn
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
-from .attention import (
+from .attention_factory import (
     AttentionFactory, 
     AttentionConfig,
-    StandardGQA,
-    SlidingWindowGQA
 )
+from .attention import (
+    ImprovedSlidingWindowGQA
+)
+
 from .feedforward import (
     FeedForwardFactory,
     FeedForwardConfig,

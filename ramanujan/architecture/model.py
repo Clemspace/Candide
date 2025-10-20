@@ -47,10 +47,11 @@ from typing import Optional, Tuple, Dict, Any
 from dataclasses import dataclass
 import math
 
+
 from .blocks import (
-    TransformerBlock,
     EnhancedPretrainingBlock,
     PostNormTransformerBlock,
+    TransformerBlock,
     BlockFactory,
     BlockConfig
 )
@@ -725,31 +726,34 @@ def create_model(config: ModelConfig) -> nn.Module:
         )
 
 
-def create_model_from_dict(config_dict: dict) -> nn.Module:
-    """
-    Create model from dictionary config.
+class ModelFactory:
+    """Factory for creating transformer models."""
     
-    Useful for loading from YAML/JSON configs.
+    @staticmethod
+    def create(config: ModelConfig) -> nn.Module:
+        """Create model based on config."""
+        # This is your existing create_model() logic
+        model_type = config.model_type.lower()
+        
+        if model_type in ['standard', 'default']:
+            return StandardModel(...)
+        elif model_type in ['enhanced', 'pretraining']:
+            return EnhancedPretrainingModel(...)
+        elif model_type == 'baseline':
+            return BaselineModel(...)
+        else:
+            raise ValueError(f"Unknown model_type: {model_type}")
     
-    Args:
-        config_dict: Dictionary with model parameters
-    
-    Returns:
-        Transformer model
-    
-    Example:
-        >>> config = {
-        ...     'vocab_size': 32000,
-        ...     'dim': 512,
-        ...     'num_layers': 6,
-        ...     'num_heads': 8,
-        ...     'num_kv_heads': 4,
-        ...     'model_type': 'standard'
-        ... }
-        >>> model = create_model_from_dict(config)
-    """
-    config = ModelConfig(**config_dict)
-    return create_model(config)
+    @staticmethod
+    def create_from_dict(config_dict: dict) -> nn.Module:
+        """Create from dictionary."""
+        config = ModelConfig(**config_dict)
+        return ModelFactory.create(config)
+
+# Keep old function for backward compatibility
+def create_model(config: ModelConfig) -> nn.Module:
+    """Legacy function - use ModelFactory.create() instead."""
+    return ModelFactory.create(config)
 
 
 # ============================================================================
