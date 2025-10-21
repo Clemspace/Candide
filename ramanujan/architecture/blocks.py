@@ -165,6 +165,10 @@ class TransformerBlock(nn.Module):
         
         # Residual dropout (applied after attention and FFN)
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+
+        # Gradient checkpointing
+        self.gradient_checkpointing = False
+
     
     def forward(
         self,
@@ -172,7 +176,7 @@ class TransformerBlock(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        Forward pass.
+        Forward pass with optional gradient checkpointing.
         
         Args:
             x: Input tensor [batch, seq_len, dim]
@@ -181,15 +185,53 @@ class TransformerBlock(nn.Module):
         Returns:
             Output tensor [batch, seq_len, dim]
         """
-        # Self-attention with residual
-        attn_out = self.attention(self.attn_norm(x), mask=mask)
-        x = x + self.dropout(attn_out)
-        
-        # Feedforward with residual
-        ffn_out = self.ffn(self.ffn_norm(x))
-        x = x + self.dropout(ffn_out)
+        if self.gradient_checkpointing and self.training:
+            # Use gradient checkpointing to save memory
+            x = x + self.dropout(self._checkpointed_attention(x, mask))
+            x = x + self.dropout(self._checkpointed_ffn(x))
+        else:
+            # Standard forward pass
+            attn_out = self.attention(self.attn_norm(x), mask=mask)
+            x = x + self.dropout(attn_out)
+            
+            ffn_out = self.ffn(self.ffn_norm(x))
+            x = x + self.dropout(ffn_out)
         
         return x
+    
+    def _checkpointed_attention(self, x: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+        """Attention with gradient checkpointing."""
+        if mask is None:
+            # Checkpoint without mask
+            return torch.utils.checkpoint.checkpoint(
+                lambda x: self.attention(self.attn_norm(x), mask=None),
+                x,
+                use_reentrant=False
+            )
+        else:
+            # Checkpoint with mask
+            return torch.utils.checkpoint.checkpoint(
+                lambda x, m: self.attention(self.attn_norm(x), mask=m),
+                x,
+                mask,
+                use_reentrant=False
+            )
+    
+    #def _attention_forward(self, x: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+    #    """Wrapper for attention forward pass."""
+    #    return self.attention(self.attn_norm(x), mask=mask)
+    
+    def _checkpointed_ffn(self, x: torch.Tensor) -> torch.Tensor:
+        """FFN with gradient checkpointing."""
+        return torch.utils.checkpoint.checkpoint(
+            self._ffn_forward,
+            x,
+            use_reentrant=False
+        )
+    
+    def _ffn_forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Wrapper for FFN forward pass."""
+        return self.ffn(self.ffn_norm(x))
     
     def get_info(self) -> dict:
         """Get information about this block."""
@@ -320,6 +362,9 @@ class EnhancedPretrainingBlock(nn.Module):
         
         # Residual dropout
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+
+        # Gradient checkpointing
+        self.gradient_checkpointing = False
     
     def forward(
         self,
@@ -327,7 +372,7 @@ class EnhancedPretrainingBlock(nn.Module):
         mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         """
-        Forward pass.
+        Forward pass with optional gradient checkpointing.
         
         Args:
             x: Input tensor [batch, seq_len, dim]
@@ -336,15 +381,44 @@ class EnhancedPretrainingBlock(nn.Module):
         Returns:
             Output tensor [batch, seq_len, dim]
         """
-        # Self-attention with residual
-        attn_out = self.attention(self.attn_norm(x), mask=mask)
-        x = x + self.dropout(attn_out)
-        
-        # Feedforward with residual
-        ffn_out = self.ffn(self.ffn_norm(x))
-        x = x + self.dropout(ffn_out)
+        if self.gradient_checkpointing and self.training:
+            # Use gradient checkpointing to save memory
+            x = x + self.dropout(self._checkpointed_attention(x, mask))
+            x = x + self.dropout(self._checkpointed_ffn(x))
+        else:
+            # Standard forward pass
+            attn_out = self.attention(self.attn_norm(x), mask=mask)
+            x = x + self.dropout(attn_out)
+            
+            ffn_out = self.ffn(self.ffn_norm(x))
+            x = x + self.dropout(ffn_out)
         
         return x
+    
+    def _checkpointed_attention(self, x: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+        """Attention with gradient checkpointing."""
+        return torch.utils.checkpoint.checkpoint(
+            self._attention_forward,
+            x,
+            mask,
+            use_reentrant=False
+        )
+    
+    def _attention_forward(self, x: torch.Tensor, mask: Optional[torch.Tensor]) -> torch.Tensor:
+        """Wrapper for attention forward pass."""
+        return self.attention(self.attn_norm(x), mask=mask)
+    
+    def _checkpointed_ffn(self, x: torch.Tensor) -> torch.Tensor:
+        """FFN with gradient checkpointing."""
+        return torch.utils.checkpoint.checkpoint(
+            self._ffn_forward,
+            x,
+            use_reentrant=False
+        )
+    
+    def _ffn_forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Wrapper for FFN forward pass."""
+        return self.ffn(self.ffn_norm(x))
     
     def get_info(self) -> dict:
         """Get information about this block."""
@@ -524,7 +598,7 @@ class BlockConfig:
     ffn_sparsity: float = 0.0
     
     # Sliding window (for enhanced block)
-    use_sliding_window: bool = False
+    use_sliding_window: bool = True
     window_size: int = 512
     num_global_tokens: int = 64
 

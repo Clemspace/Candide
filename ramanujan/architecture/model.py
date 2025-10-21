@@ -151,6 +151,27 @@ class BaseTransformerLM(nn.Module):
             'non_embedding_params': self.get_num_params(non_embedding=True)
         }
 
+    def enable_gradient_checkpointing(self):
+        """
+        Enable gradient checkpointing to save memory.
+        
+        Trades computation for memory by not storing intermediate activations.
+        Reduces memory usage by ~30-50% with ~15-20% slowdown.
+        """
+        if hasattr(self, 'blocks'):
+            for block in self.blocks:
+                if hasattr(block, 'gradient_checkpointing'):
+                    block.gradient_checkpointing = True
+        print("✅ Gradient checkpointing enabled")
+    
+    def disable_gradient_checkpointing(self):
+        """Disable gradient checkpointing."""
+        if hasattr(self, 'blocks'):
+            for block in self.blocks:
+                if hasattr(block, 'gradient_checkpointing'):
+                    block.gradient_checkpointing = False
+        print("✅ Gradient checkpointing disabled")
+
 
 # ============================================================================
 # STANDARD MODEL
