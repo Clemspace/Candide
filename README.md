@@ -52,13 +52,64 @@ Unlike production frameworks that hide complexity, Candide exposes it. We believ
 
 ---
 
-## Quick Start
+## Installation
+
+### Requirements
+
+- Python 3.8+
+- PyTorch 2.0+ with CUDA 11.8+
+- 8GB+ GPU RAM (for tiny-test config)
+- 16GB+ GPU RAM (for small-100m config)
+
+### Basic Installation
 ```bash
-# Install
-git clone https://github.com/Clemspace/candide.git
-cd candide
+# Clone repository
+git clone https://github.com/Clemspace/Candide.git
+cd Candide
+
+# Install PyTorch with CUDA support first (adjust for your CUDA version)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install dependencies
 pip install -r requirements.txt
 
+# Install Candide in editable mode
+pip install -e .
+
+# Verify installation
+python -c "import ramanujan; print('✅ Candide installed successfully!')"
+```
+
+### Development Installation
+```bash
+# Install with all development tools
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install -e ".[all]"
+
+# Setup code formatting
+black --version
+isort --version
+```
+
+### With Weights & Biases
+```bash
+pip install -e ".[logging]"
+wandb login
+```
+
+### Package Structure
+
+**Note**: The project is called **Candide** (philosophy), but the Python package is named **ramanujan** (after the mathematician whose graph theory inspired our sparsity techniques). When using the code:
+```python
+from ramanujan.architecture import create_model  # Import from 'ramanujan'
+from ramanujan.training import Trainer
+```
+
+---
+
+## Quick Start
+```bash
 # Train a 35M parameter model (2 minutes on single GPU)
 python ramanujan/training/train.py --config configs/tiny-test.yaml
 

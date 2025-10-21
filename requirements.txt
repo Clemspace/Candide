@@ -1,0 +1,13 @@
+# Core dependencies
+torch>=2.0.0
+transformers>=4.30.0
+tokenizers>=0.13.0
+datasets>=2.14.0
+
+# Configuration & utilities
+pyyaml>=6.0
+numpy>=1.24.0
+tqdm>=4.65.0
+
+# Optional but recommended
+safetensors>=0.3.0
