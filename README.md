@@ -301,8 +301,8 @@ If you use Candide in your research:
   title={Candide: A Transparent Framework for Transformer Training},
   author={Castellon, Clément and ModERN Team},
   year={2025},
-  organization={Monash University},
-  url={https://github.com/Clemspace/candide}
+  organization={Sorbonne Université, ENS},
+  url={https://github.com/Clemspace/Candide}
 }
 ```
 
@@ -333,9 +333,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Contact
 
-- **ModERN Team**: [modern.team@monash.edu]
-- **Issues**: [github.com/Clemspace/candide/issues](https://github.com/Clemspace/candide/issues)
-- **Discussions**: [github.com/Clemspace/candide/discussions](https://github.com/Clemspace/candide/discussions)
+- **ModERN Team**: 
+- **Issues**: [github.com/Clemspace/candide/issues](https://github.com/Clemspace/Candide/issues)
+- **Discussions**: [github.com/Clemspace/candide/discussions](https://github.com/Clemspace/Candide/discussions)
 
 ---
 
