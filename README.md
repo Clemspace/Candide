@@ -311,8 +311,9 @@ If you use Candide in your research:
 ## Acknowledgments
 
 ### ModERN Team
-- **Glenn Roe** (Team Lead) - Monash University
-- **Clément Castellon** (Primary Developer)
+- **Glenn Roe** (Team Lead) - Oxford University, ENS
+- **Dario Nicolosi** (Book guy) - Sorbonne Université
+- **Clément Castellon** (Primary Developer) - Sorbonne Université
 
 ### Technical Foundations
 - Meta AI: Llama architecture, RoPE implementation
