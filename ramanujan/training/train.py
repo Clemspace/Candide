@@ -208,6 +208,11 @@ def main():
     logger.info(f"Model created: {model.__class__.__name__}")
     logger.info(f"Total parameters: {total_params:,}")
     logger.info(f"Trainable parameters: {trainable_params:,}")
+
+    # Enable gradient checkpointing if requested
+    if config.training.use_gradient_checkpointing:
+        model.enable_gradient_checkpointing()
+        logger.info("Gradient checkpointing enabled")
     
     # Compute sparsity statistics
     if config.sparsity.attention_sparsity > 0 or config.sparsity.ffn_sparsity > 0:
@@ -219,6 +224,7 @@ def main():
         logger.info(f"  Active parameters: {sparsity_stats['sparse_params']:,}")
         logger.info(f"  Savings: {sparsity_stats['dense_params']:,} parameters")
     
+
     # Load data
     logger.info("\n" + "="*70)
     logger.info("Loading data...")

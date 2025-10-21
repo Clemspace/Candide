@@ -101,6 +101,11 @@ class TrainingConfig:
     # Device
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
     mixed_precision: bool = False  # Use AMP
+
+    # Memory optimization
+
+    use_gradient_checkpointing: bool = False
+
     
     # Reproducibility
     seed: int = 42
@@ -190,7 +195,7 @@ class Trainer:
         
         
         # Mixed precision
-        self.scaler = torch.cuda.amp.GradScaler() if self.config.mixed_precision else None
+        self.scaler = torch.amp.GradScaler('cuda') if self.config.mixed_precision else None
         
         # Create directories
         os.makedirs(self.config.output_dir, exist_ok=True)
