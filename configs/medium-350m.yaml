@@ -1,0 +1,248 @@
+# ============================================================================
+# Medium Configuration: ~350M Parameters
+# ============================================================================
+# 
+# This configuration creates a ~350M parameter model optimized for:
+# - Mid-range GPUs (16-24GB VRAM)
+# - Balanced performance/efficiency
+# - Production pretraining on moderate compute
+#
+# Expected training speed: ~5-8 tokens/sec on A100 (40GB)
+# Memory usage: ~12-16GB VRAM with batch_size=8
+# ============================================================================
+
+name: "medium-350m"
+description: "Medium-scale model with 350M parameters - balanced config for mid-range GPUs"
+tags:
+  - "production"
+  - "350m"
+  - "medium-scale"
+
+# ============================================================================
+# MODEL ARCHITECTURE (~350M parameters)
+# ============================================================================
+model:
+  # Vocabulary
+  vocab_size: 32000  # Options: 32000 (LLaMA), 50257 (GPT-2), 31980 (Mistral), 100000 (large vocab)
+  
+  # Core dimensions (these determine model size)
+  dim: 1024          # Model dimension. Options: 512 (small), 768 (base), 1024 (medium), 1280 (large), 2048 (xl)
+  num_layers: 24     # Number of transformer layers. Options: 6 (tiny), 12 (small), 24 (medium), 32 (large), 48 (xl)
+  num_heads: 16      # Number of attention heads. Must divide dim evenly. Options: 8, 12, 16, 20, 32
+  num_kv_heads: 4    # GQA: Key-value heads. Options: 1 (MQA), 2, 4, 8 (50% reduction), num_heads (MHA, no GQA)
+  
+  # FFN dimension (controls feedforward network size)
+  hidden_dim: 2730   # FFN hidden dim. Options: None (auto: ~2.67*dim for SwiGLU), 4*dim (standard), custom
+                     # Auto-computed if None: int(8*dim/3) rounded to nearest 256
+  
+  # Sequence length
+  max_seq_len: 2048  # Maximum sequence length. Options: 512 (short), 1024, 2048 (standard), 4096 (long), 8192 (very long)
+  
+  # Regularization
+  dropout: 0.0       # Dropout probability. Options: 0.0 (no dropout), 0.1 (standard), 0.2 (heavy)
+                     # Note: Modern large models often use 0.0
+  
+  # Special tokens
+  pad_token_id: 0    # Padding token ID. Usually 0, check your tokenizer
+  
+  # Model variant settings
+  tie_embeddings: true   # Tie input/output embeddings. Options: true (saves params), false (more capacity)
+  model_type: "enhanced" # Model type. Options: 'standard' (basic), 'enhanced' (all features), 'baseline' (minimal)
+  ffn_type: "swiglu"     # FFN activation. Options: 'swiglu' (modern, better), 'standard' (ReLU, classic)
+  norm_type: "rms"       # Normalization type. Options: 'rms' (faster, modern), 'layer' (classic LayerNorm)
+
+# ============================================================================
+# SPARSITY CONFIGURATION (Ramanujan Graph Sparsity)
+# ============================================================================
+sparsity:
+  # Sparsity levels (0.0 = dense, 1.0 = fully sparse)
+  attention_sparsity: 0.0  # Attention sparsity. Options: 0.0 (dense), 0.5, 0.75, 0.82 (high), 0.90 (very high)
+  ffn_sparsity: 0.0        # FFN sparsity. Options: 0.0 (dense), 0.5, 0.75, 0.85, 0.88 (high), 0.95 (extreme)
+  
+  # Ramanujan graph construction
+  max_prime: 1000      # Maximum prime for graph construction. Options: 100 (fast), 500, 1000 (standard), 5000 (slow but better)
+  force_method: "lps"  # Construction method. Options: 'lps' (Lubotzky-Phillips-Sarnak), 'biregular', null (auto-select)
+  
+  # Sliding window attention (for long sequences)
+  use_sliding_window: true  # Enable sliding window. Options: true (efficient for long seqs), false (full attention)
+  window_size: 512          # Window size. Options: 256 (small), 512 (standard), 1024 (large), 2048 (very large)
+  num_global_tokens: 64     # Global attention tokens. Options: 32 (minimal), 64 (standard), 128 (more context), 256 (maximum)
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+training:
+  # Training duration
+  max_steps: 100000  # Total training steps. Options: 10000 (quick), 50000, 100000 (standard), 500000 (long), 1000000 (full)
+  
+  # Batch configuration
+  batch_size: 8                    # Per-device batch size. Options: 4 (small GPU), 8 (standard), 16 (large GPU), 32 (multi-GPU)
+  gradient_accumulation_steps: 8   # Accumulation steps. Effective batch = batch_size * accum * num_gpus
+                                   # Options: 1 (no accum), 2, 4, 8 (standard), 16 (large effective batch)
+                                   # Effective batch size here: 8 * 8 = 64
+  # Memory optimization
+  use_gradient_checkpointing: false  # Save 30-50% memory with 15-20% slowdown #TODO fix locking when enabled
+  
+  # Evaluation
+  eval_every: 1000   # Evaluate every N steps. Options: 100 (frequent), 500, 1000 (standard), 5000 (rare)
+  eval_steps: 100    # Number of eval steps. Options: 50 (quick), 100 (standard), 500 (thorough)
+  
+  # Logging
+  log_every: 10      # Log every N steps. Options: 1 (verbose), 10 (standard), 50 (quiet), 100 (minimal)
+  save_every: 5000   # Save checkpoint every N steps. Options: 1000 (frequent), 5000 (standard), 10000 (rare)
+  
+  # Output paths
+  output_dir: "outputs/medium-350m"
+  checkpoint_dir: "checkpoints/medium-350m"
+  log_dir: "logs/medium-350m"
+  
+  # Loss function
+  loss_type: "semantic_entropy"  # Loss type. Options: 'ce' (cross-entropy, standard), 'semantic_entropy' (better, modern)
+  label_smoothing: 0.1           # Label smoothing. Options: 0.0 (none), 0.1 (standard), 0.2 (heavy)
+  semantic_entropy_alpha: 0.1    # Semantic entropy weight. Options: 0.0 (disable), 0.05, 0.1 (standard), 0.2 (strong)
+  
+  # Optimizer configuration
+  optimizer_type: "adamw"  # Optimizer. Options: 'adam', 'adamw' (standard, recommended), 'muon' (experimental, fast)
+  learning_rate: 0.0002    # Peak learning rate. Options:
+                          # - 0.0006 (aggressive)
+                          # - 0.0003 (standard for <1B params)
+                          # - 0.0002 (conservative, 350M)
+                          # - 0.0001 (very conservative, >1B params)
+                          # - 0.02 (for Muon optimizer only)
+  weight_decay: 0.01      # Weight decay. Options: 0.0 (none), 0.01 (standard), 0.1 (heavy)
+  
+  # Learning rate schedule
+  scheduler_type: "wsd"  # Scheduler type. Options:
+                        # - 'wsd' (warmup-stable-decay, RECOMMENDED, modern, +3-5% better)
+                        # - 'cosine' (classic, GPT-3/LLaMA style)
+                        # - 'cosine_restarts' (for very long training)
+                        # - 'linear' (simple)
+                        # - 'polynomial' (flexible decay)
+  
+  warmup_steps: 2000   # Warmup steps. Options:
+                      # - 2-5% of max_steps for standard training
+                      # - 500-1000 (quick warmup)
+                      # - 2000-5000 (standard, 2-5%)
+                      # - 10000+ (long warmup for large models)
+  
+  stable_steps: 50000  # Stable steps (WSD only). Options:
+                      # - None (auto: 45% of max_steps)
+                      # - 40-50% of max_steps (standard)
+                      # - Remaining steps will be decay phase
+  
+  min_lr: 0.00002     # Minimum LR (10% of peak). Options:
+                      # - 0.0 (decay to zero, not recommended)
+                      # - 0.1 * learning_rate (10%, standard)
+                      # - 0.05 * learning_rate (5%, more aggressive)
+  
+  # Training dynamics
+  max_grad_norm: 1.0  # Gradient clipping. Options: 0.5 (aggressive), 1.0 (standard), 5.0 (lenient), null (no clipping)
+  
+  # Hardware configuration
+  device: "cuda"           # Device. Options: 'cuda' (GPU), 'cpu' (slow), 'cuda:0' (specific GPU)
+  mixed_precision: true    # Use AMP (Automatic Mixed Precision). Options: true (2x faster, recommended), false (full precision)
+  
+  # Reproducibility
+  seed: 42  # Random seed. Options: 42 (standard), any integer for different runs
+  
+  # Weights & Biases logging
+  use_wandb: true                          # Enable W&B. Options: true (recommended for tracking), false (local only)
+  wandb_project: "ramanujan-transformer"   # W&B project name
+  wandb_run_name: "medium-350m-run1"       # Run name. Change for each experiment
+  
+  # Resume training
+  resume_from_checkpoint: null  # Path to checkpoint. Options: null (start fresh), "checkpoints/medium-350m/step_50000.pt" (resume)
+
+# ============================================================================
+# PARAMETER COUNT BREAKDOWN (Approximate)
+# ============================================================================
+#
+# With current settings (dim=1024, layers=24, heads=16, kv_heads=4):
+#
+# Embeddings:     32,000 * 1,024 = 32.8M params
+# 
+# Per Layer (~13.1M params/layer):
+#   Attention:
+#     - Q projection:  1,024 * 1,024 = 1.05M  (with 75% sparsity: 0.26M)
+#     - K projection:  1,024 * 256  = 0.26M  (with 75% sparsity: 0.07M)
+#     - V projection:  1,024 * 256  = 0.26M  (with 75% sparsity: 0.07M)
+#     - O projection:  1,024 * 1,024 = 1.05M  (with 75% sparsity: 0.26M)
+#     Total attention: 2.62M (dense) → 0.66M (sparse)
+#   
+#   FFN:
+#     - Gate proj:     1,024 * 2,730 = 2.80M  (with 85% sparsity: 0.42M)
+#     - Value proj:    1,024 * 2,730 = 2.80M  (with 85% sparsity: 0.42M)
+#     - Output proj:   2,730 * 1,024 = 2.80M  (with 85% sparsity: 0.42M)
+#     Total FFN: 8.39M (dense) → 1.26M (sparse)
+#   
+#   Norms: 2 * 1,024 = 2,048 params (negligible)
+#
+# 24 Layers:       24 * (0.66M + 1.26M) = 46.1M params
+# Output layer:    32,000 * 1,024 = 32.8M (tied with embeddings)
+#
+# TOTAL (with sparsity): ~79M params
+# TOTAL (without sparsity): ~350M params
+#
+# Memory requirements:
+# - Model:         ~350M * 4 bytes = 1.4 GB (fp32) or 700 MB (fp16)
+# - Activations:   ~8-10 GB (depends on batch size and sequence length)
+# - Optimizer:     ~2.8 GB (AdamW state: 2x model size)
+# - Total:         ~12-16 GB VRAM (with batch_size=8, seq_len=2048, mixed precision)
+#
+# ============================================================================
+
+# ============================================================================
+# USAGE EXAMPLES
+# ============================================================================
+#
+# Basic training:
+#   python ramanujan/training/train.py --config configs/medium-350m.yaml
+#
+# Training with W&B:
+#   python ramanujan/training/train.py --config configs/medium-350m.yaml --wandb
+#
+# Resume from checkpoint:
+#   python ramanujan/training/train.py --config configs/medium-350m.yaml \
+#     --resume checkpoints/medium-350m/step_50000.pt
+#
+# Multi-GPU training (DDP):
+#   torchrun --nproc_per_node=4 ramanujan/training/train.py \
+#     --config configs/medium-350m.yaml
+#
+# Evaluation only:
+#   python ramanujan/training/train.py --config configs/medium-350m.yaml \
+#     --eval-only --checkpoint checkpoints/medium-350m/best.pt
+#
+# ============================================================================
+
+# ============================================================================
+# HYPERPARAMETER TUNING SUGGESTIONS
+# ============================================================================
+#
+# For better performance, try these variations:
+#
+# 1. Higher learning rate:
+#    learning_rate: 0.0003  # Instead of 0.0002
+#
+# 2. Longer warmup:
+#    warmup_steps: 5000     # Instead of 2000
+#
+# 3. Different sparsity:
+#    attention_sparsity: 0.82  # Higher sparsity
+#    ffn_sparsity: 0.88        # Higher sparsity
+#
+# 4. Larger batch size (if you have VRAM):
+#    batch_size: 16
+#    gradient_accumulation_steps: 4  # Keep effective batch = 64
+#
+# 5. No sliding window (if sequences are short):
+#    use_sliding_window: false
+#
+# 6. Standard loss (faster, simpler):
+#    loss_type: "ce"
+#    label_smoothing: 0.1
+#
+# 7. Longer stable phase (for WSD):
+#    stable_steps: 60000  # 60% instead of 50%
+#
+# ============================================================================

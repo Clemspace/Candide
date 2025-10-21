@@ -1,0 +1,61 @@
+name: "tiny-test"
+description: "Tiny config to test training works"
+
+model:
+  vocab_size: 32000
+  dim: 512          # Much smaller
+  num_layers: 6     # Much fewer
+  num_heads: 8
+  num_kv_heads: 4
+  hidden_dim: 1536
+  max_seq_len: 512  # Shorter sequences
+  dropout: 0.0
+  pad_token_id: 0
+  tie_embeddings: true
+  model_type: "enhanced"
+  ffn_type: "swiglu"
+  norm_type: "rms"
+
+sparsity:
+  attention_sparsity: 0.0
+  ffn_sparsity: 0.0
+  max_prime: 1000
+  force_method: "lps"
+  use_sliding_window: true
+  window_size: 128  # Small window
+  num_global_tokens: 16
+
+training:
+  max_steps: 1000
+  batch_size: 2     # Tiny batch
+  gradient_accumulation_steps: 4
+  
+  eval_every: 500
+  eval_steps: 10
+  log_every: 10
+  save_every: 500
+  
+  output_dir: "outputs/tiny-test"
+  checkpoint_dir: "checkpoints/tiny-test"
+  log_dir: "logs/tiny-test"
+  
+  loss_type: "ce"  # Simple loss
+  label_smoothing: 0.0
+  
+  optimizer_type: "adamw"
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  
+  scheduler_type: "cosine"
+  warmup_steps: 100
+  min_lr: 0.00003
+  
+  max_grad_norm: 1.0
+  device: "cuda"
+  mixed_precision: true
+  seed: 42
+  
+  use_wandb: false
+  use_gradient_checkpointing: false
+  
+  resume_from_checkpoint: null

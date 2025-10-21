@@ -1,0 +1,64 @@
+name: "small-100m"
+description: "100M parameter model - fits in 16GB VRAM"
+
+model:
+  vocab_size: 32000
+  dim: 768
+  num_layers: 12
+  num_heads: 12
+  num_kv_heads: 4
+  hidden_dim: 2048
+  max_seq_len: 1024    # Shorter
+  dropout: 0.0
+  pad_token_id: 0
+  tie_embeddings: true
+  model_type: "enhanced"
+  ffn_type: "swiglu"
+  norm_type: "rms"
+
+sparsity:
+  attention_sparsity: 0.0
+  ffn_sparsity: 0.0
+  max_prime: 1000
+  force_method: "lps"
+  use_sliding_window: true
+  window_size: 256
+  num_global_tokens: 32
+
+training:
+  max_steps: 100000
+  batch_size: 4        # Reduced
+  gradient_accumulation_steps: 16
+  
+  eval_every: 1000
+  eval_steps: 50
+  log_every: 10
+  save_every: 5000
+  
+  output_dir: "outputs/small-100m"
+  checkpoint_dir: "checkpoints/small-100m"
+  log_dir: "logs/small-100m"
+  
+  loss_type: "ce"
+  label_smoothing: 0.1
+  
+  optimizer_type: "adamw"
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  
+  scheduler_type: "wsd"
+  warmup_steps: 2000
+  stable_steps: 50000
+  min_lr: 0.00003
+  
+  max_grad_norm: 1.0
+  device: "cuda"
+  mixed_precision: true
+  seed: 42
+  
+  use_wandb: true
+  wandb_project: "ramanujan-transformer"
+  wandb_run_name: "small-100m-run1"
+  use_gradient_checkpointing: false
+  
+  resume_from_checkpoint: null
