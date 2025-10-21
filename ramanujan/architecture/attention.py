@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 from typing import Optional, Tuple
+
 from .normalization import QKNorm
 from .embeddings import (
     precompute_freqs_cis,
@@ -215,33 +216,68 @@ class ImprovedSlidingWindowGQA(ImprovedGQA):
         self.window_size = window_size
         self.num_global_tokens = num_global_tokens
         self.use_sliding_window = use_sliding_window
+
+        # CRITICAL: Pre-cache masks for common sequence lengths
+        # This avoids recreating masks every forward pass
+        self._mask_cache = {}
+        
+        # Pre-compute masks for common sizes
+        if use_sliding_window:
+            for size in [256, 512, 1024, 2048]:
+                if size <= max_seq_len:
+                    self._precompute_mask(size)
     
-    def create_sliding_window_mask(
-        self,
-        seq_len: int,
-        device: torch.device
-    ) -> torch.Tensor:
-        """Create sliding window attention mask."""
-        if not self.use_sliding_window:
-            # Full causal attention
-            mask = torch.tril(torch.ones(seq_len, seq_len, device=device, dtype=torch.bool))
-            return mask.float()
-        
-        # Start with all masked
-        mask = torch.zeros(seq_len, seq_len, device=device, dtype=torch.bool)
-        
-        half_window = self.window_size // 2
-        
-        for i in range(seq_len):
-            # Local window (causal)
-            start = max(0, i - half_window)
-            end = i + 1  # Causal: only attend to past and present
-            mask[i, start:end] = True
+    def _precompute_mask(self, seq_len: int):
+            """Pre-compute and cache mask for a given sequence length."""
+            if seq_len in self._mask_cache:
+                return
             
-            # Global tokens (first num_global_tokens)
-            mask[i, :min(self.num_global_tokens, end)] = True
+            # Create mask on CPU first (saves GPU memory)
+            mask = torch.zeros(seq_len, seq_len, dtype=torch.bool)
+            
+            if not self.use_sliding_window:
+                # Full causal attention
+                mask = torch.tril(torch.ones(seq_len, seq_len, dtype=torch.bool))
+            else:
+                # Sliding window + global tokens
+                half_window = self.window_size // 2
+                
+                for i in range(seq_len):
+                    # Local window (causal)
+                    start = max(0, i - half_window)
+                    end = i + 1
+                    mask[i, start:end] = True
+                    
+                    # Global tokens
+                    mask[i, :min(self.num_global_tokens, end)] = True
+            
+            # Store as float and keep on CPU
+            self._mask_cache[seq_len] = mask.float()
         
-        return mask.float()
+    def get_sliding_window_mask(
+            self,
+            seq_len: int,
+            device: torch.device
+        ) -> torch.Tensor:
+            """
+            Get cached mask for sequence length.
+            
+            This is MUCH more efficient than creating a new mask every time.
+            """
+            # Ensure mask is cached
+            if seq_len not in self._mask_cache:
+                self._precompute_mask(seq_len)
+            
+            # Get from cache and move to correct device
+            mask = self._mask_cache[seq_len]
+            
+            # Only move to device if needed
+            if mask.device != device:
+                mask = mask.to(device)
+                # Update cache with device-specific version
+                self._mask_cache[seq_len] = mask
+            
+            return mask
     
     def forward(
         self,
@@ -279,7 +315,8 @@ class ImprovedSlidingWindowGQA(ImprovedGQA):
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
         
         # Create and apply sliding window mask
-        sw_mask = self.create_sliding_window_mask(L, x.device)
+        
+        sw_mask = self.get_sliding_window_mask(L, x.device)
         sw_mask = sw_mask.unsqueeze(0).unsqueeze(0)  # [1, 1, seq, seq]
         
         # Combine with provided mask if any
