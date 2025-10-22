@@ -776,6 +776,9 @@ class TestMutableGraph:
         
         clone = original.clone()
         
+        # Clear input/output designations to allow removal
+        clone.outputs = []  # type: ignore
+        
         # Modify clone
         clone.remove_node('b')
         

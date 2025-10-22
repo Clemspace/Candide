@@ -122,7 +122,7 @@ class TestTensorSpec:
         repr_str = repr(spec)
         assert 'batch' in repr_str
         assert 'seq' in repr_str
-        assert 'TEXT' in repr_str
+        assert 'text' in repr_str
 
 
 class TestDynamicTensorSpec:
