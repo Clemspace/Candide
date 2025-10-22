@@ -229,22 +229,54 @@ def main():
     logger.info("\n" + "="*70)
     logger.info("Loading data...")
     logger.info("="*70)
-    
+
     tokenizer = get_tokenizer(vocab_size=config.model.vocab_size)
-    
-    data_loader = WikiTextLoader(
-        dataset_name='wikitext-2-raw-v1',
-        vocab_size=config.model.vocab_size,
-        sequence_length=config.model.max_seq_len,
-        tokenizer=tokenizer
-    )
-    
+
+    # Select dataset based on config
+    dataset_type = config.data.dataset_type if hasattr(config, 'data') else 'wikitext'
+
+    if dataset_type == 'fineweb':
+        from ramanujan.data import FineWebLoader
+        
+        logger.info(f"Using FineWeb-Edu dataset")
+        logger.info(f"  Subset: {config.data.subset}")
+        logger.info(f"  Streaming: {config.data.streaming}")
+        
+        data_loader = FineWebLoader(
+            subset=config.data.subset,
+            sequence_length=config.data.sequence_length,
+            tokenizer=tokenizer,
+            streaming=config.data.streaming,
+            cache_dir=config.data.cache_dir,
+        )
+        
+    elif dataset_type == 'wikitext':
+        from ramanujan.data import WikiTextLoader
+        
+        # Get dataset name from config
+        dataset_name = getattr(config.data, 'dataset_config', 'wikitext-2-raw-v1')
+        
+        logger.info(f"Using WikiText dataset")
+        logger.info(f"  Dataset: {dataset_name}")
+        
+        data_loader = WikiTextLoader(
+            dataset_name=dataset_name,
+            vocab_size=config.model.vocab_size,
+            sequence_length=config.data.sequence_length,
+            tokenizer=tokenizer,
+            cache_dir=config.data.cache_dir,
+        )
+        
+    else:
+        raise ValueError(f"Unknown dataset_type: {dataset_type}. Choose 'wikitext' or 'fineweb'")
+
+    # Create dataloaders
     train_loader, eval_loader = data_loader.get_dataloaders(
         batch_size=config.training.batch_size,
         num_workers=4,
         shuffle_train=True
     )
-    
+
     logger.info(f"Train batches: {len(train_loader)}")
     logger.info(f"Eval batches: {len(eval_loader)}")
     
