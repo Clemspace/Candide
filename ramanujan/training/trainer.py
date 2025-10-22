@@ -180,7 +180,12 @@ class Trainer:
         # Setup device
         self.device = torch.device(self.config.device)
         self.model.to(self.device)
-        
+
+        # Timing tracking
+        self.step_start_time = None
+        self.tokens_processed = 0
+        self.max_seq_len = getattr(train_loader.dataset, 'max_length', 1024)
+
         # Setup loss function
         if loss_fn is None:
             self.loss_fn = create_loss(
@@ -302,12 +307,21 @@ class Trainer:
                 vocab_size=self.model.vocab_size,
                 sequence_length=targets.shape[1]
             )
+            if self.step_start_time is not None:
+                step_time = time.time() - self.step_start_time
+                tokens_per_batch = self.config.batch_size * self.max_seq_len
+                tokens_per_step = tokens_per_batch * self.config.gradient_accumulation_steps
+                tokens_per_sec = tokens_per_step / step_time
+                self.tokens_processed += tokens_per_step
         
         metrics = {
             'loss': (loss * self.config.gradient_accumulation_steps).item(),
             'perplexity': perplexity.item(),
             'bpb': bpb,
-            'lr': self.optimizer.param_groups[0]['lr']
+            'lr': self.optimizer.param_groups[0]['lr'],
+            'tokens_per_sec' : tokens_per_sec,
+            'step_time': step_time,
+            'total_tokens': self.tokens_processed
         }
         
         return metrics
@@ -352,6 +366,8 @@ class Trainer:
         
         while self.global_step < self.config.max_steps:
             for batch in self.train_loader:
+
+                self.step_start_time = time.time()  
                 # Training step
                 step_metrics = self.train_step(batch)
                 accumulation_step += 1
@@ -469,12 +485,25 @@ class Trainer:
     
     def _log_metrics(self, metrics: Dict[str, float], prefix: str = 'train'):
         """Log metrics to console and W&B."""
-        # Console logging
+        # Console logging with better formatting
         step_info = f"Step {self.global_step}"
-        metrics_str = " | ".join([f"{k}: {v:.4f}" for k, v in metrics.items()])
+        
+        # Format metrics (special handling for tokens_per_sec)
+        formatted_metrics = []
+        for k, v in metrics.items():
+            if k == 'tokens_per_sec':
+                formatted_metrics.append(f"{k}: {v:.0f}")  # No decimals for tokens/sec
+            elif k == 'total_tokens':
+                formatted_metrics.append(f"{k}: {v:,.0f}")  # Comma separated
+            elif k in ['step_time']:
+                formatted_metrics.append(f"{k}: {v:.3f}s")  # Add 's' for seconds
+            else:
+                formatted_metrics.append(f"{k}: {v:.4f}")
+        
+        metrics_str = " | ".join(formatted_metrics)
         print(f"[{prefix.upper()}] {step_info} | {metrics_str}")
         
-        # W&B logging
+        # W&B logging (unchanged)
         if self.config.use_wandb and self.wandb_run:
             log_dict = {f"{prefix}/{k}": v for k, v in metrics.items()}
             log_dict['step'] = self.global_step
