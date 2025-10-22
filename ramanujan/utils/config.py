@@ -31,6 +31,7 @@ from pathlib import Path
 # MODEL CONFIGURATION
 # ============================================================================
 
+
 @dataclass
 class ModelConfig:
     """
@@ -101,6 +102,9 @@ class ModelConfig:
                 self.hidden_dim = 4 * self.dim
 
 
+
+
+
 # ============================================================================
 # SPARSITY CONFIGURATION
 # ============================================================================
@@ -151,6 +155,29 @@ class SparsityConfig:
             raise ValueError(f"force_method must be 'lps', 'biregular', or None, got {self.force_method}")
 
 
+@dataclass
+class DataConfig:
+    """Data configuration."""
+    # Dataset selection
+    dataset_type: str = "wikitext"  # 'wikitext' or 'fineweb'
+    dataset_name: Optional[str] = None
+    dataset_config: Optional[str] = None
+    
+    # FineWeb specific
+    subset: str = "sample-10BT"  # For FineWeb
+    streaming: bool = True
+    
+    # General settings
+    sequence_length: int = 1024
+    text_column: str = "text"
+    cache_dir: Optional[str] = None
+    
+    # Legacy WikiText settings
+    dataset_split: str = "train"
+    max_length: int = 1024
+    stride: Optional[int] = None
+
+
 # ============================================================================
 # TRAINING CONFIGURATION (reference to training module)
 # ============================================================================
@@ -192,6 +219,8 @@ class ExperimentConfig:
     model: ModelConfig
     sparsity: SparsityConfig
     training: TrainingConfig
+    data: DataConfig  
+
     
     # Metadata
     name: str = "experiment"
@@ -206,6 +235,7 @@ class ExperimentConfig:
             'training': asdict(self.training),
             'name': self.name,
             'description': self.description,
+            'data': asdict(self.data),
             'tags': self.tags
         }
     
@@ -214,6 +244,7 @@ class ExperimentConfig:
         """Create from dictionary."""
         return cls(
             model=ModelConfig(**config_dict['model']),
+            data=DataConfig(**config_dict['data']),
             sparsity=SparsityConfig(**config_dict['sparsity']),
             training=TrainingConfig(**config_dict['training']),
             name=config_dict.get('name', 'experiment'),

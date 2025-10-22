@@ -28,6 +28,12 @@ from .config import (
     create_ablation_configs
 )
 
+from .checkpoint import (
+    load_checkpoint,
+    save_checkpoint,
+    get_checkpoint_info
+)
+
 from .metrics import (
     compute_sparsity_stats,
     compute_bpb,
@@ -52,6 +58,11 @@ __all__ = [
     'load_config',
     'save_config',
     'create_ablation_configs',
+
+    # Checkpoint
+    'load_checkpoint',
+    'save_checkpoint',
+    'get_checkpoint_info',
     
     # Metrics
     'compute_sparsity_stats',

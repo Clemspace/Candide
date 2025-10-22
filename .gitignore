@@ -170,7 +170,7 @@ mlruns/
 lightning_logs/
 
 # Datasets (comment out if you want to version control small datasets)
-data/
+#data/
 datasets/
 *.hdf5
 *.h5
