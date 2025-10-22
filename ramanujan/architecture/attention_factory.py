@@ -10,8 +10,8 @@ from .attention import (
     ImprovedGQA,
     ImprovedSlidingWindowGQA,
 )
-from ..foundation import RamanujanFoundation
-
+#from ..foundation import RamanujanFoundation
+from ramanujan.foundation import RamanujanFoundation
 
 @dataclass
 class AttentionConfig:
@@ -37,10 +37,10 @@ class AttentionConfig:
     
     # Improvements
     use_qk_norm: bool = False
-    use_improved: bool = False
+    use_improved: bool = True
     
     # Attention type (for manual override)
-    attention_type: str = 'auto'  # 'auto', 'standard', 'improved', 'sliding', 'improved_sliding'
+    attention_type: str = 'improved_sliding'  # 'auto', 'standard', 'improved', 'sliding', 'improved_sliding'
 
 
 class AttentionFactory:
@@ -108,7 +108,7 @@ class AttentionFactory:
                     dropout=config.dropout
                 )
             else:
-                return StandardGQA(
+                return ImprovedGQA(
                     dim=config.dim,
                     num_heads=config.num_heads,
                     num_kv_heads=config.num_kv_heads,
@@ -123,9 +123,9 @@ class AttentionFactory:
         """Create attention by explicit type."""
         
         type_map = {
-            'standard': StandardGQA,
+            #'standard': StandardGQA,
             'improved': ImprovedGQA,
-            'sliding': SlidingWindowGQA,
+            #'sliding': SlidingWindowGQA,
             'improved_sliding': ImprovedSlidingWindowGQA,
         }
         
