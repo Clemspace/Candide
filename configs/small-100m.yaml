@@ -1,64 +1,122 @@
-name: "small-100m"
-description: "100M parameter model - fits in 16GB VRAM"
+# ============================================================================
+# Small 100M Configuration - Optimized for Training
+# ============================================================================
 
+name: "small-100m-v2"
+description: "100M parameter model with improved training dynamics"
+
+# ============================================================================
+# MODEL ARCHITECTURE
+# ============================================================================
 model:
-  vocab_size: 32000
+  # Core architecture (matches ModelConfig exactly)
+  vocab_size: 50257
   dim: 768
   num_layers: 12
   num_heads: 12
-  num_kv_heads: 4
-  hidden_dim: 2048
-  max_seq_len: 1024    # Shorter
-  dropout: 0.0
+  num_kv_heads: 12
+  hidden_dim: null  # Auto-computed
+  
+  # Regularization
+  dropout: 0.1
+  attention_dropout: 0.1
+  
+  # Sequence and tokens
+  max_seq_len: 1024
   pad_token_id: 0
   tie_embeddings: true
+  
+  # Model variant
   model_type: "enhanced"
   ffn_type: "swiglu"
   norm_type: "rms"
 
+  # ============================================================================
+  # SPARSITY CONFIGURATION (Ramanujan Graph Sparsity)
+  # ============================================================================
 sparsity:
-  attention_sparsity: 0.0
-  ffn_sparsity: 0.0
-  max_prime: 1000
-  force_method: "lps"
-  use_sliding_window: true
-  window_size: 256
-  num_global_tokens: 32
+  # Sparsity levels (0.0 = dense, 1.0 = fully sparse)
+  attention_sparsity: 0.0  # Attention sparsity. Options: 0.0 (dense), 0.5, 0.75, 0.82 (high), 0.90 (very high)
+  ffn_sparsity: 0.0        # FFN sparsity. Options: 0.0 (dense), 0.5, 0.75, 0.85, 0.88 (high), 0.95 (extreme)
+  
+  # Ramanujan graph construction
+  max_prime: 1000      # Maximum prime for graph construction. Options: 100 (fast), 500, 1000 (standard), 5000 (slow but better)
+  force_method: "lps"  # Construction method. Options: 'lps' (Lubotzky-Phillips-Sarnak), 'biregular', null (auto-select)
+  
+  # Sliding window attention (for long sequences)
+  use_sliding_window: true  # Enable sliding window. Options: true (efficient for long seqs), false (full attention)
+  window_size: 512          # Window size. Options: 256 (small), 512 (standard), 1024 (large), 2048 (very large)
+  num_global_tokens: 64     # Global attention tokens. Options: 32 (minimal), 64 (standard), 128 (more context), 256 (maximum)
 
+  
+  # Sliding window (disabled for standard model)
+  use_sliding_window: false
+  window_size: 512
+  num_global_tokens: 64
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
 training:
+  # Duration
   max_steps: 100000
-  batch_size: 4        # Reduced
-  gradient_accumulation_steps: 16
   
-  eval_every: 1000
-  eval_steps: 50
-  log_every: 10
-  save_every: 5000
+  # Batch configuration
+  batch_size: 8
+  gradient_accumulation_steps: 8  # Effective batch = 64
   
-  output_dir: "outputs/small-100m"
-  checkpoint_dir: "checkpoints/small-100m"
-  log_dir: "logs/small-100m"
+  # Learning rate - IMPROVED
+  learning_rate: 0.0001      # Lower from 0.0003
+  min_lr: 0.00001           # 10% of max
+  weight_decay: 0.01
+  max_grad_norm: 0.5        # Lower from 1.0 for stability
   
+  # Optimizer & Scheduler
+  optimizer_type: "adamw"
+  scheduler_type: "wsd"
+  warmup_steps: 5000        # Longer warmup (from 2000)
+  stable_steps: 20000       # Shorter stable (from 50000)
+  # Decay phase: 75000 steps (75% of training)
+  
+  # Loss
   loss_type: "ce"
   label_smoothing: 0.1
+  semantic_entropy_alpha: 0.1
   
-  optimizer_type: "adamw"
-  learning_rate: 0.0003
-  weight_decay: 0.01
-  
-  scheduler_type: "wsd"
-  warmup_steps: 2000
-  stable_steps: 50000
-  min_lr: 0.00003
-  
-  max_grad_norm: 1.0
+  # Hardware
   device: "cuda"
   mixed_precision: true
-  seed: 42
-  
-  use_wandb: true
-  wandb_project: "ramanujan-transformer"
-  wandb_run_name: "small-100m-run1"
   use_gradient_checkpointing: false
   
+  # Logging
+  log_every: 10
+  eval_every: 500           # More frequent (from 1000)
+  eval_steps: 50
+  save_every: 5000
+  
+  # Paths
+  checkpoint_dir: "checkpoints/small-100m-v2"
+  output_dir: "outputs/small-100m-v2"
+  log_dir: "logs/small-100m-v2"
+  
+  # W&B
+  use_wandb: true
+  wandb_project: "ramanujan-transformer"
+  wandb_run_name: "small-100m-v2"
+  
+  # Other
+  seed: 42
   resume_from_checkpoint: null
+
+# ============================================================================
+# DATA CONFIGURATION
+# ============================================================================
+data:
+  dataset_name: "wikitext"
+  dataset_config: "wikitext-2-raw-v1"
+  dataset_split: "train"
+  text_column: "text"
+  max_length: 1024
+  stride: null
+  streaming: false
+  cache_dir: null

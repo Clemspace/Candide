@@ -1,0 +1,89 @@
+name: "small-100m-fineweb"
+description: "100M model trained on FineWeb-Edu - high quality educational web text"
+tags:
+  - "production"
+  - "100m"
+  - "fineweb"
+
+# ============================================================================
+# MODEL ARCHITECTURE (same as v2)
+# ============================================================================
+model:
+  vocab_size: 50257
+  dim: 768
+  num_layers: 12
+  num_heads: 12
+  num_kv_heads: 12
+  hidden_dim: null
+  dropout: 0.1
+  attention_dropout: 0.1
+  max_seq_len: 1024
+  pad_token_id: 0
+  tie_embeddings: true
+  model_type: "standard"
+  ffn_type: "swiglu"
+  norm_type: "rms"
+
+# ============================================================================
+# SPARSITY (disabled)
+# ============================================================================
+sparsity:
+  attention_sparsity: 0.0
+  ffn_sparsity: 0.0
+  use_sliding_window: false
+  window_size: 512
+  num_global_tokens: 64
+  max_prime: 1000
+  force_method: "lps"
+
+# ============================================================================
+# TRAINING (same proven settings from v2)
+# ============================================================================
+training:
+  max_steps: 100000
+  batch_size: 8
+  gradient_accumulation_steps: 8
+  max_grad_norm: 0.5
+  
+  eval_every: 500
+  eval_steps: 50
+  log_every: 10
+  save_every: 5000
+  
+  output_dir: "outputs/small-100m-fineweb"
+  checkpoint_dir: "checkpoints/small-100m-fineweb"
+  log_dir: "logs/small-100m-fineweb"
+  
+  loss_type: "ce"
+  label_smoothing: 0.1
+  semantic_entropy_alpha: 0.1
+  
+  optimizer_type: "adamw"
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  
+  scheduler_type: "wsd"
+  warmup_steps: 5000
+  stable_steps: 20000
+  min_lr: 0.00001
+  
+  device: "cuda"
+  mixed_precision: true
+  use_gradient_checkpointing: false
+  
+  seed: 42
+  use_wandb: true
+  wandb_project: "ramanujan-transformer"
+  wandb_run_name: "small-100m-fineweb"
+  resume_from_checkpoint: null
+
+# ============================================================================
+# DATA - FINEWEB-EDU
+# ============================================================================
+data:
+  dataset_type: "fineweb"
+  subset: "sample-10BT"      # 10B tokens (~9.6GB)
+  streaming: true            # Stream to avoid downloading all
+  sequence_length: 1024
+  text_column: "text"
+  cache_dir: null
