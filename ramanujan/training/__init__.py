@@ -1,71 +1,127 @@
-"""
-Training: Components for training Ramanujan models.
+"""Training utilities for Candide framework."""
 
-This module provides training utilities including loss functions,
-optimizers, schedulers, and the main Trainer class.
-
-Components:
-- Loss functions (semantic entropy, standard CE)
-- Optimizers (Muon, AdEMAMix, AdamW, hybrid)
-- Learning rate schedulers
-- Trainer class for orchestrating training
-
-Example:
-    >>> from ramanujan.training import Trainer, create_optimizer
-    >>> from ramanujan import create_model
-    >>> 
-    >>> model = create_model(config)
-    >>> optimizer = create_optimizer(model, config)
-    >>> trainer = Trainer(model, optimizer, train_loader, eval_loader, config)
-    >>> trainer.train()
-"""
-
+# Loss system
 from .losses import (
-    SemanticEntropyLoss,
+    LossComponent,
+    LossSpec,
+    CrossEntropyLoss,
     SemanticEntropyProbe,
-    standard_cross_entropy,
+    KLDivergenceLoss,
+    CompositeLoss,
     create_loss,
+    create_loss_from_config,
+    create_loss_from_spec,
+    LOSS_REGISTRY
 )
 
+# Optimizer system
 from .optimizers import (
+    OptimizerComponent,
+    OptimizerSpec,
+    BaseOptimizerWrapper,
+    AdamWOptimizer,
     MuonOptimizer,
     AdEMAMixOptimizer,
-    HybridOptimizerManager,
+    SGDOptimizer,
+    LionOptimizer,
     create_optimizer,
-    create_layerwise_optimizer
+    create_optimizer_from_config,
+    create_optimizer_from_spec,
+    create_optimizer_with_param_groups,
+    create_optimizer_with_llrd,
+    get_optimizer_info,
+    get_learning_rates,
+    set_learning_rate,
+    create_param_groups,
+    get_layer_wise_lr_groups,
+    OPTIMIZER_REGISTRY
 )
 
+# Scheduler system
 from .schedulers import (
-    CosineWarmupScheduler,
-    CosineWarmupWithRestarts,
-    create_scheduler
+    SchedulerComponent,
+    SchedulerSpec,
+    WarmupScheduler,
+    CosineScheduler,
+    ConstantScheduler,
+    create_scheduler,
+    create_scheduler_from_config,
+    create_scheduler_from_spec,
+    SCHEDULER_REGISTRY
 )
 
+# Trainer system
 from .trainer import (
     Trainer,
-    AblationStudy
+    TrainingConfig,
+    TrainingState,
+    CallbackProtocol,
+    Callback,
+    WandBCallback,
+    EarlyStoppingCallback,
+    CheckpointCallback,
+    ProgressCallback,
+    MetricsSaverCallback,
+    SparsityTrackerCallback
 )
+
+
 
 __all__ = [
     # Losses
-    'SemanticEntropyLoss',
+    'LossComponent',
+    'LossSpec',
+    'CrossEntropyLoss',
     'SemanticEntropyProbe',
-    'standard_cross_entropy',
+    'KLDivergenceLoss',
+    'CompositeLoss',
     'create_loss',
+    'create_loss_from_config',
+    'create_loss_from_spec',
+    'LOSS_REGISTRY',
     
     # Optimizers
+    'OptimizerComponent',
+    'OptimizerSpec',
+    'BaseOptimizerWrapper',
+    'AdamWOptimizer',
     'MuonOptimizer',
     'AdEMAMixOptimizer',
-    'HybridOptimizerManager',
+    'SGDOptimizer',
+    'LionOptimizer',
     'create_optimizer',
-    'create_layerwise_optimizer',
+    'create_optimizer_from_config',
+    'create_optimizer_from_spec',
+    'create_optimizer_with_param_groups',
+    'create_optimizer_with_llrd',
+    'get_optimizer_info',
+    'get_learning_rates',
+    'set_learning_rate',
+    'create_param_groups',
+    'get_layer_wise_lr_groups',
+    'OPTIMIZER_REGISTRY',
     
     # Schedulers
-    'CosineWarmupScheduler',
-    'CosineWarmupWithRestarts',
+    'SchedulerComponent',
+    'SchedulerSpec',
+    'WarmupScheduler',
+    'CosineScheduler',
+    'ConstantScheduler',
     'create_scheduler',
-    
-    # Training
+    'create_scheduler_from_config',
+    'create_scheduler_from_spec',
+    'SCHEDULER_REGISTRY',
+
+    # Trainer
     'Trainer',
-    'AblationStudy',
+    'TrainingConfig',
+    'TrainingState',
+    'CallbackProtocol',
+    'Callback',
+    'WandBCallback',
+    'EarlyStoppingCallback',
+    'CheckpointCallback',
+    'ProgressCallback',
+    'MetricsSaverCallback',
+    'SparsityTrackerCallback',
 ]

@@ -37,11 +37,35 @@ from .registry import ComponentRegistry, get_component, create_component
 from .interface import Component, ForwardMetadata
 
 
+"""
+Updated GraphExecutor for ramanujan/core/builder.py
+
+This replaces your existing GraphExecutor class.
+Adds support for:
+- ForwardContext passing
+- ComponentOutput handling
+- Intermediate activation access
+- KV cache collection
+- Backward compatible with existing components
+"""
+
+import torch
+import torch.nn as nn
+from typing import Dict, List, Optional, Union, Tuple, Any
+from ramanujan.core.graph import ComputationGraph
+from ramanujan.core.registry import ComponentRegistry
+from ramanujan.core.interface import ForwardContext, ComponentOutput, ForwardMetadata
+
+
 class GraphExecutor(nn.Module):
     """
-    Executes a computation graph.
+    Executes a computation graph with context support.
     
-    This is the runtime that takes a graph definition and makes it executable.
+    Enhanced from original to support:
+    - ForwardContext for metadata (masks, positions, cache, mode)
+    - ComponentOutput for multi-value returns (attention weights, cache)
+    - Intermediate activation access (for losses like semantic entropy)
+    - Both sequential and DAG execution modes
     
     Two execution modes:
     1. Sequential (optimized): For linear graphs, uses nn.ModuleList
@@ -97,8 +121,6 @@ class GraphExecutor(nn.Module):
             try:
                 # Get component class from registry
                 component_cls = ComponentRegistry.get(
-                    # Extract category from component_type
-                    # e.g., 'transformer_block' -> look in 'block' category
                     self._get_category(node.component_type),
                     node.component_type
                 )
@@ -164,6 +186,7 @@ class GraphExecutor(nn.Module):
             
             self.execution_plan.append({
                 'component': component,
+                'node': node,
                 'node_id': node.id,
                 'input_indices': input_indices,
                 'output_index': i
@@ -172,78 +195,127 @@ class GraphExecutor(nn.Module):
     def forward(
         self,
         *args,
+        ctx: Optional[ForwardContext] = None,
         return_metadata: bool = False,
+        return_intermediates: bool = False,
         **kwargs
-    ) -> torch.Tensor | Dict[str, torch.Tensor] | tuple:
+    ) -> Union[torch.Tensor, Dict[str, torch.Tensor], Tuple]:
         """
-        Execute graph.
+        Execute graph with optional context and intermediate outputs.
         
         Args:
             *args: Positional arguments for input nodes
-            return_metadata: If True, return (output, metadata) tuple
+            ctx: Optional ForwardContext (masks, positions, cache, mode)
+            return_metadata: If True, include metadata in return
+            return_intermediates: If True, return intermediate activations
             **kwargs: Keyword arguments for input nodes
         
         Returns:
-            Output tensor(s) or (output, metadata) if return_metadata=True
+            - Just output: tensor or dict of tensors
+            - With metadata: (output, metadata)
+            - With intermediates: (output, intermediates_dict)
+            - With both: (output, metadata, intermediates_dict)
         
         Example:
             >>> # Simple forward
             >>> output = model(input_ids)
             >>> 
-            >>> # With metadata
-            >>> output, metadata = model(input_ids, return_metadata=True)
+            >>> # With context
+            >>> ctx = ForwardContext(attention_mask=mask, use_cache=True)
+            >>> output = model(input_ids, ctx=ctx)
+            >>> 
+            >>> # Get intermediates for loss
+            >>> output, intermediates = model(
+            ...     input_ids, 
+            ...     ctx=ctx,
+            ...     return_intermediates=True
+            ... )
+            >>> hidden_states = intermediates['block_5']  # For semantic entropy
         """
         if self.is_sequential:
-            return self._forward_sequential(*args, return_metadata=return_metadata, **kwargs)
+            return self._forward_sequential(
+                *args,
+                ctx=ctx,
+                return_metadata=return_metadata,
+                return_intermediates=return_intermediates,
+                **kwargs
+            )
         else:
-            return self._forward_dag(*args, return_metadata=return_metadata, **kwargs)
+            return self._forward_dag(
+                *args,
+                ctx=ctx,
+                return_metadata=return_metadata,
+                return_intermediates=return_intermediates,
+                **kwargs
+            )
     
     def _forward_sequential(
         self,
         x: torch.Tensor,
-        return_metadata: bool = False
-    ) -> torch.Tensor | tuple:
+        ctx: Optional[ForwardContext] = None,
+        return_metadata: bool = False,
+        return_intermediates: bool = False
+    ) -> Union[torch.Tensor, Tuple]:
         """
-        Optimized sequential forward pass.
-        
-        Uses simple iteration - same speed as hand-written code.
+        Optimized sequential forward pass with context support.
         """
         metadata = ForwardMetadata() if return_metadata else None
+        intermediates = {} if return_intermediates else None
+        auxiliary_outputs = {}
         
         # Simple loop through components
-        for component in self.sequential_components:
+        for i, (component, node) in enumerate(zip(
+            self.sequential_components, 
+            self.execution_order
+        )):
             if return_metadata:
                 metadata.add_component(component.__class__.__name__)
             
-            # Handle both single tensor and dict returns
-            result = component(x) if not isinstance(x, dict) else component(**x)
+            # Prepare component inputs
+            component_inputs = self._prepare_component_inputs(
+                component, node, x, ctx
+            )
             
-            if isinstance(result, dict):
-                x = result.get('x', result)  # Try to get 'x', fallback to full dict
+            # Execute component
+            result = component(**component_inputs)
+            
+            # Handle ComponentOutput
+            if isinstance(result, ComponentOutput):
+                x = result.primary
+                auxiliary_outputs[node.id] = result.auxiliary
+            elif isinstance(result, dict):
+                x = result.get('x', result)
             else:
                 x = result
+            
+            # Store intermediate if requested
+            if return_intermediates:
+                intermediates[node.id] = x
         
-        if return_metadata:
-            return x, metadata
-        return x
+        # Build return value
+        return self._build_return_value(
+            x, metadata, intermediates, 
+            return_metadata, return_intermediates
+        )
     
     def _forward_dag(
         self,
         *args,
+        ctx: Optional[ForwardContext] = None,
         return_metadata: bool = False,
+        return_intermediates: bool = False,
         **kwargs
-    ) -> torch.Tensor | Dict[str, torch.Tensor] | tuple:
+    ) -> Union[torch.Tensor, Dict[str, torch.Tensor], Tuple]:
         """
-        General DAG forward pass.
-        
-        Executes nodes in topological order, caching intermediate results.
+        General DAG forward pass with context support.
         """
         # Cache for intermediate outputs
         cache = [None] * len(self.execution_order)
         metadata = ForwardMetadata() if return_metadata else None
+        intermediates = {} if return_intermediates else None
+        auxiliary_outputs = {}
         
-        # Handle inputs
-        # First node gets the input
+        # Handle inputs - first node gets the input
         if args:
             cache[0] = args[0]
         elif kwargs:
@@ -252,47 +324,149 @@ class GraphExecutor(nn.Module):
         # Execute graph
         for step in self.execution_plan:
             component = step['component']
+            node = step['node']
             
             # Gather inputs from cache
             if step['input_indices']:
                 inputs = [cache[i] for i in step['input_indices']]
-                
-                # Handle multiple inputs (fusion, etc.)
                 if len(inputs) == 1:
                     inp = inputs[0]
                 else:
-                    # Multiple inputs - component must handle
                     inp = inputs
             else:
                 # Input node - use initial input
                 inp = cache[0]
             
-            # Execute component
+            # Prepare component inputs with context
+            component_inputs = self._prepare_component_inputs(
+                component, node, inp, ctx
+            )
+            
             if return_metadata:
                 metadata.add_component(step['node_id'])
             
-            # Call component
-            if isinstance(inp, list):
-                # Multiple inputs - try to unpack
-                try:
-                    output = component(*inp)
-                except TypeError:
-                    # Component doesn't accept multiple args
-                    output = component(inp)
-            elif isinstance(inp, dict):
-                output = component(**inp)
+            # Execute component
+            result = component(**component_inputs)
+            
+            # Handle ComponentOutput
+            if isinstance(result, ComponentOutput):
+                output = result.primary
+                auxiliary_outputs[node.id] = result.auxiliary
             else:
-                output = component(inp)
+                output = result
             
             # Cache output
             cache[step['output_index']] = output
+            
+            # Store intermediate if requested
+            if return_intermediates:
+                intermediates[node.id] = output
         
         # Return output from last node
         final_output = cache[-1]
         
-        if return_metadata:
-            return final_output, metadata
-        return final_output
+        return self._build_return_value(
+            final_output, metadata, intermediates,
+            return_metadata, return_intermediates
+        )
+    
+    def _prepare_component_inputs(
+        self,
+        component: nn.Module,
+        node: Any,
+        data_input: Any,
+        ctx: Optional[ForwardContext]
+    ) -> Dict[str, Any]:
+        """
+        Prepare inputs for component forward call.
+        
+        Handles:
+        - Named vs positional inputs
+        - Context injection
+        - Input spec matching
+        
+        Args:
+            component: Component to call
+            node: Graph node
+            data_input: Data input(s) from previous component
+            ctx: Optional forward context
+        
+        Returns:
+            Dictionary of keyword arguments for component
+        """
+        inputs = {}
+        
+        # Check if component has input_spec
+        if hasattr(component, 'input_spec'):
+            input_spec = component.input_spec
+            
+            # Iterate through expected inputs
+            for input_name in input_spec.keys():
+                if input_name == 'ctx':
+                    # Special case: inject context
+                    if ctx is not None:
+                        inputs['ctx'] = ctx
+                elif input_name == 'x':
+                    # Primary input
+                    if isinstance(data_input, dict):
+                        inputs['x'] = data_input.get('x', data_input)
+                    else:
+                        inputs['x'] = data_input
+                else:
+                    # Other inputs from node config or data_input
+                    if isinstance(data_input, dict) and input_name in data_input:
+                        inputs[input_name] = data_input[input_name]
+                    elif not input_spec[input_name].optional:
+                        # Required input not found
+                        pass  # Component will handle the error
+        else:
+            # Component doesn't have input_spec
+            # Try to pass data as-is
+            if isinstance(data_input, dict):
+                inputs.update(data_input)
+            else:
+                inputs['x'] = data_input
+            
+            # Try to add context if component accepts it
+            # (check signature or just try)
+            if ctx is not None:
+                inputs['ctx'] = ctx
+        
+        return inputs
+    
+    def _build_return_value(
+        self,
+        output: Any,
+        metadata: Optional[ForwardMetadata],
+        intermediates: Optional[Dict],
+        return_metadata: bool,
+        return_intermediates: bool
+    ) -> Union[Any, Tuple]:
+        """
+        Build return value based on flags.
+        
+        Args:
+            output: Final output
+            metadata: Optional metadata
+            intermediates: Optional intermediate activations
+            return_metadata: Whether to return metadata
+            return_intermediates: Whether to return intermediates
+        
+        Returns:
+            Output possibly with metadata and/or intermediates
+        """
+        returns = [output]
+        
+        if return_metadata and metadata is not None:
+            returns.append(metadata)
+        
+        if return_intermediates and intermediates is not None:
+            returns.append(intermediates)
+        
+        if len(returns) == 1:
+            return returns[0]
+        else:
+            return tuple(returns)
     
     def get_component(self, node_id: str) -> nn.Module:
         """

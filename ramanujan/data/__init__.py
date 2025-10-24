@@ -1,53 +1,64 @@
-"""
-Data: Dataset loaders and preprocessing utilities.
+"""Data loading and processing for Candide framework."""
 
-This module provides data loading and preprocessing for various datasets
-including WikiText, FineWeb, and custom datasets.
+# Base classes
+from .base import (
+    DatasetProtocol,
+    BaseDataset,
+    StreamingDataset,
+    TokenizedDataset,
+    DatasetConfig,
+)
 
-Components:
-- Dataset loaders (WikiText, FineWeb)
-- Tokenizer wrappers
-- Curriculum learning samplers
-- Data utilities
+# Text datasets
+from .datasets.text import (
+    TextDataset,
+    StreamingTextDataset,
+    MemoryMappedTextDataset,
+)
 
-Example:
-    >>> from ramanujan.data import WikiTextLoader
-    >>> 
-    >>> loader = WikiTextLoader(
-    ...     dataset_name="wikitext-2",
-    ...     vocab_size=31980,
-    ...     sequence_length=128
-    ... )
-    >>> train_loader, eval_loader = loader.get_dataloaders(batch_size=8)
-"""
+# Collation functions
+from .loaders.collation import (
+    default_collate,
+    padded_collate,
+    text_collate,
+    causal_lm_collate,
+    sequence_classification_collate,
+    get_collate_fn,
+)
 
-from .datasets import (
+# DataLoader factories
+from .loaders.factory import (
     WikiTextLoader,
-    FineWebLoader
+    FineWebLoader,
+    create_dataloader,
+    create_dataloader_from_config,
 )
 
-from .tokenizer import (
-    VocabConstrainedTokenizer,
-    MistralTokenizerWrapper,
-    get_tokenizer
-)
-
-from .curriculum import (
-    ConfidenceBasedSampler,
-    CurriculumDataLoader
-)
 
 __all__ = [
-    # Datasets
+    # Base classes
+    'DatasetProtocol',
+    'BaseDataset',
+    'StreamingDataset',
+    'TokenizedDataset',
+    'DatasetConfig',
+    
+    # Text datasets
+    'TextDataset',
+    'StreamingTextDataset',
+    'MemoryMappedTextDataset',
+    
+    # Collation
+    'default_collate',
+    'padded_collate',
+    'text_collate',
+    'causal_lm_collate',
+    'sequence_classification_collate',
+    'get_collate_fn',
+    
+    # Loaders
     'WikiTextLoader',
     'FineWebLoader',
-    
-    # Tokenizer
-    'VocabConstrainedTokenizer',
-    'MistralTokenizerWrapper',
-    'get_tokenizer',
-    
-    # Curriculum
-    'ConfidenceBasedSampler',
-    'CurriculumDataLoader',
+    'create_dataloader',
+    'create_dataloader_from_config',
 ]

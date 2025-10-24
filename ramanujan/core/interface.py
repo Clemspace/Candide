@@ -960,6 +960,130 @@ class SerializableComponent(Component, Protocol):
         ...
 
 
+@dataclass
+class ForwardContext:
+    """
+    Metadata passed through forward pass.
+    
+    This enables components to access information beyond their direct inputs:
+    - Attention masks (padding, causal)
+    - Position indices (for RoPE, sinusoidal)
+    - KV cache (for autoregressive generation)
+    - Mode-specific behavior (train vs eval vs generate)
+    - Custom fields for specialized components
+    
+    Example:
+        >>> ctx = ForwardContext(
+        ...     attention_mask=causal_mask,
+        ...     positions=torch.arange(seq_len),
+        ...     use_cache=True,
+        ...     mode=ForwardMode.GENERATE
+        ... )
+        >>> output = model(input_ids, ctx)
+    """
+    
+    # Attention-related
+    attention_mask: Optional[Tensor] = None  # [batch, seq, seq] or [batch, 1, seq, seq]
+    positions: Optional[Tensor] = None  # [batch, seq] or [seq]
+    past_key_values: Optional[List[Any]] = None  # List of (key, value) tuples per layer
+    use_cache: bool = False  # Whether to return KV cache for generation
+    
+    # Mode
+    mode: ForwardMode = ForwardMode.TRAIN
+    
+    # Custom fields (for specialized components)
+    custom: Dict[str, Any] = field(default_factory=dict)
+    
+    def clone(self) -> 'ForwardContext':
+        """Create a copy of this context."""
+        return ForwardContext(
+            attention_mask=self.attention_mask,
+            positions=self.positions,
+            past_key_values=self.past_key_values,
+            use_cache=self.use_cache,
+            mode=self.mode,
+            custom=self.custom.copy()
+        )
+    
+    def with_updates(self, **kwargs) -> 'ForwardContext':
+        """Create a new context with updated fields."""
+        ctx = self.clone()
+        for key, value in kwargs.items():
+            if hasattr(ctx, key):
+                setattr(ctx, key, value)
+            else:
+                ctx.custom[key] = value
+        return ctx
+
+
+class ComponentOutput:
+    """
+    Structured output from a component.
+    
+    Components can return:
+    1. Just a tensor (backward compatible)
+    2. ComponentOutput with primary tensor + auxiliary outputs
+    
+    This enables:
+    - Attention returning weights alongside output
+    - Components providing KV cache for generation
+    - Accessing intermediate activations for losses
+    
+    Example:
+        >>> # Component returns multiple outputs
+        >>> result = attention(x, ctx)
+        >>> output = result.primary  # Main output tensor
+        >>> attn_weights = result.auxiliary['attention_weights']
+        >>> kv_cache = result.auxiliary['present_key_values']
+        >>> 
+        >>> # Or unpack (backward compatible)
+        >>> output, aux = result
+    """
+    
+    def __init__(self, primary: Tensor, **auxiliary):
+        """
+        Args:
+            primary: Main output tensor (required)
+            **auxiliary: Additional outputs as keyword arguments
+        """
+        self.primary = primary
+        self.auxiliary = auxiliary
+    
+    def __getitem__(self, key: Union[int, str]):
+        """
+        Allow both indexing and key access.
+        
+        result[0] → primary
+        result[1] → auxiliary dict
+        result['attention_weights'] → specific auxiliary output
+        """
+        if isinstance(key, int):
+            if key == 0:
+                return self.primary
+            elif key == 1:
+                return self.auxiliary
+            else:
+                raise IndexError(f"ComponentOutput only supports indices 0, 1, got {key}")
+        else:
+            return self.auxiliary[key]
+    
+    def __iter__(self):
+        """Allow unpacking: output, aux = component(x)"""
+        return iter([self.primary, self.auxiliary])
+    
+    def get(self, key: str, default=None):
+        """Get auxiliary output with default."""
+        return self.auxiliary.get(key, default)
+    
+    def keys(self):
+        """Get auxiliary output keys."""
+        return self.auxiliary.keys()
+    
+    def __repr__(self):
+        aux_keys = list(self.auxiliary.keys())
+        return f"ComponentOutput(primary={self.primary.shape}, auxiliary={aux_keys})"
+
+
 # ============================================================================
 # TYPE ALIASES
 # ============================================================================
