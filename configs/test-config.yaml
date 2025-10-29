@@ -1,0 +1,55 @@
+# Test Training Configuration - Small & Fast
+# Start with this to verify everything works, then scale up
+
+model:
+  vocab_size: 32000
+  d_model: 512
+  n_layers: 6
+  n_heads: 8
+  d_ff: 2048
+  max_seq_len: 512  # Shorter for testing
+  dropout: 0.1
+  
+  norm_first: true
+  norm_type: rms
+  attention_type: gqa
+  ffn_type: swiglu
+  n_kv_heads: 4
+  use_rope: true
+  rope_theta: 10000.0
+  bias: false
+  tie_word_embeddings: false
+
+training:
+  max_steps: 100  # Just 100 steps for testing
+  batch_size: 4  # Smaller batch
+  gradient_accumulation_steps: 2
+  learning_rate: 0.0003
+  lr_scheduler: warmup_stable_decay
+  warmup_steps: 20  # Quick warmup
+  min_lr: 0.00003
+  optimizer: adamw
+  weight_decay: 0.1
+  grad_clip: 1.0
+  mixed_precision: bf16
+  gradient_checkpointing: false
+  log_every: 5
+  eval_every: 50
+  save_every: 50
+  output_dir: ./test_run
+
+data:
+  dataset: wikitext  # Faster than FineWeb for testing
+  subset: wikitext-2-raw-v1
+  tokenizer: null  # Will use GPT-2
+  sequence_length: 512
+  num_workers: 4
+  pin_memory: true
+
+logging:
+  use_wandb: true  
+  log_every: 5
+
+hardware:
+  device: cuda
+  seed: 42
