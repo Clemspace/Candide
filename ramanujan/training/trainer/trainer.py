@@ -1,136 +1,134 @@
-"""Main Trainer class for training models."""
+"""Refactored Trainer - Clean component injection and better architecture."""
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from typing import Optional, List, Dict, Any
+from torch.nn.parallel import DistributedDataParallel as DDP
+from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
-import json
 import time
+import math
 
 try:
     from tqdm import tqdm
 except ImportError:
-    # Fallback if tqdm not available
     def tqdm(iterable, **kwargs):
         return iterable
 
-# Mixed precision imports (compatible with PyTorch 2.0+)
+# Mixed precision
 try:
     from torch.cuda.amp import autocast, GradScaler
 except ImportError:
-    # Fallback for older PyTorch
     from torch.amp import autocast, GradScaler
 
 from .base import TrainingConfig, TrainingState, CallbackProtocol
-from ..losses import create_loss_from_config
-from ..optimizers import create_optimizer_from_config
-from ..schedulers import create_scheduler_from_config
 
 
 class Trainer:
     """
-    Main trainer class for training language models.
+    Refactored trainer with component injection.
     
-    Features:
-    - Mixed precision training
-    - Gradient accumulation
-    - Checkpointing and resuming
-    - Validation
-    - Callbacks (WandB, early stopping, etc.)
-    - Metrics tracking
+    Key improvements:
+    - Components (optimizer, loss, scheduler) are injected, not created internally
+    - DDP support built-in
+    - Gradient checkpointing support
+    - Better metrics computation
+    - Cleaner separation of concerns
     
     Example:
-        >>> config = TrainingConfig(
-        ...     output_dir='runs/exp1',
-        ...     max_steps=10000,
-        ...     batch_size=32
-        ... )
+        >>> # Create components externally
+        >>> model = create_model(model_config)
+        >>> optimizer = create_optimizer('adamw', model.parameters(), lr=1e-3)
+        >>> loss_fn = create_loss('cross_entropy', vocab_size=32000)
+        >>> scheduler = create_scheduler('warmup', optimizer, warmup_steps=1000)
+        >>> 
+        >>> # Inject into trainer
         >>> trainer = Trainer(
         ...     model=model,
-        ...     config=config,
+        ...     optimizer=optimizer,
+        ...     loss_fn=loss_fn,
+        ...     config=training_config,
         ...     train_dataloader=train_loader,
-        ...     val_dataloader=val_loader
+        ...     scheduler=scheduler,
+        ...     callbacks=[wandb_callback, checkpoint_callback]
         ... )
+        >>> 
         >>> trainer.train()
     """
     
     def __init__(
         self,
         model: nn.Module,
+        optimizer: torch.optim.Optimizer,  # Accept any optimizer
+        loss_fn: Union[nn.Module, Any],    # Accept any loss function
         config: TrainingConfig,
         train_dataloader: DataLoader,
         val_dataloader: Optional[DataLoader] = None,
-        callbacks: Optional[List[CallbackProtocol]] = None
+        scheduler: Optional[Any] = None,    # Accept any scheduler
+        callbacks: Optional[List[CallbackProtocol]] = None,
+        device: Optional[torch.device] = None,
     ):
         """
-        Initialize trainer.
+        Initialize trainer with injected components.
         
         Args:
             model: Model to train
+            optimizer: Optimizer (pre-configured)
+            loss_fn: Loss function (pre-configured)
             config: Training configuration
             train_dataloader: Training data loader
             val_dataloader: Validation data loader (optional)
+            scheduler: Learning rate scheduler (optional)
             callbacks: List of callbacks (optional)
+            device: Device to use (optional, defaults to config.device)
         """
-        self.model = model
         self.config = config
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.callbacks = callbacks or []
         
-        # Move model to device
-        self.device = torch.device(config.device)
-        self.model.to(self.device)
+        # Device
+        self.device = device or torch.device(config.device)
+        self.is_distributed = config.distributed
+        self.local_rank = 0
         
-        # Create loss function
-        loss_config = {'name': config.loss_name, **config.loss_config}
-        self.loss_fn = create_loss_from_config(loss_config)
+        # Setup distributed if needed
+        if self.is_distributed:
+            self._setup_distributed()
         
-        # Create optimizer
-        optimizer_config = {
-            'name': config.optimizer_name,
-            'lr': config.learning_rate,
-            'weight_decay': config.weight_decay,
-            **config.optimizer_config
-        }
-        self.optimizer = create_optimizer_from_config(
-            optimizer_config,
-            self.model.parameters()
-        )
+        # Model setup
+        self.model = model.to(self.device)
         
-        # Create scheduler
-        scheduler_config = {
-            'name': config.scheduler_name,
-            **config.scheduler_config
-        }
+        # Gradient checkpointing
+        if hasattr(config, 'use_gradient_checkpointing') and config.use_gradient_checkpointing:
+            if hasattr(self.model, 'gradient_checkpointing_enable'):
+                self.model.gradient_checkpointing_enable()
+                print("✅ Gradient checkpointing enabled")
         
-        # Add required parameters for warmup scheduler if not provided
-        if config.scheduler_name == 'warmup':
-            if 'warmup_steps' not in scheduler_config:
-                scheduler_config['warmup_steps'] = config.max_steps // 10  # 10% warmup
-            if 'total_steps' not in scheduler_config:
-                scheduler_config['total_steps'] = config.max_steps
+        # Wrap with DDP if distributed
+        if self.is_distributed:
+            self.model = DDP(
+                self.model,
+                device_ids=[self.local_rank],
+                output_device=self.local_rank,
+                find_unused_parameters=False
+            )
         
-        # Add required parameters for cosine scheduler if not provided
-        elif config.scheduler_name == 'cosine':
-            if 'total_steps' not in scheduler_config:
-                scheduler_config['total_steps'] = config.max_steps
-        
-        self.scheduler = create_scheduler_from_config(
-            scheduler_config,
-            self.optimizer
-        )
+        # Components (injected, not created)
+        self.optimizer = optimizer
+        self.loss_fn = loss_fn.to(self.device) if hasattr(loss_fn, 'to') else loss_fn
+        self.scheduler = scheduler
         
         # Mixed precision
-        self.scaler = GradScaler() if config.mixed_precision else None
+        self.use_mixed_precision = config.mixed_precision
+        self.scaler = GradScaler() if self.use_mixed_precision else None
         
         # Training state
         self.state = TrainingState()
         
-        # Metrics
-        self.running_loss = 0.0
-        self.running_steps = 0
+        # Metrics tracking
+        self.step_start_time = None
+        self.tokens_processed = 0
         
         # Set seed
         self._set_seed(config.seed)
@@ -138,6 +136,17 @@ class Trainer:
         # Resume if specified
         if config.resume_from:
             self.load_checkpoint(config.resume_from)
+    
+    def _setup_distributed(self):
+        """Setup distributed training."""
+        if not torch.distributed.is_initialized():
+            torch.distributed.init_process_group(backend='nccl')
+        
+        self.local_rank = torch.distributed.get_rank()
+        torch.cuda.set_device(self.local_rank)
+        self.device = torch.device(f'cuda:{self.local_rank}')
+        
+        print(f"🌐 Distributed training: Rank {self.local_rank}/{torch.distributed.get_world_size()}")
     
     def _set_seed(self, seed: int):
         """Set random seed for reproducibility."""
@@ -197,7 +206,8 @@ class Trainer:
         pbar = tqdm(
             total=self.config.max_steps,
             initial=self.state.global_step,
-            desc="Training"
+            desc="Training",
+            disable=self.is_distributed and self.local_rank != 0
         )
         
         while self.state.global_step < self.config.max_steps:
@@ -212,11 +222,13 @@ class Trainer:
             metrics = self._train_step(batch)
             
             # Update progress bar
-            pbar.update(1)
-            pbar.set_postfix({
-                'loss': f"{metrics.get('loss', 0):.4f}",
-                'lr': f"{self.scheduler.get_last_lr()[0]:.6f}"
-            })
+            if not self.is_distributed or self.local_rank == 0:
+                pbar.update(1)
+                pbar.set_postfix({
+                    'loss': f"{metrics.get('loss', 0):.4f}",
+                    'ppl': f"{metrics.get('perplexity', 0):.1f}",
+                    'lr': f"{self._get_lr():.2e}"
+                })
             
             # Log
             if self.state.global_step % self.config.log_every == 0:
@@ -229,7 +241,8 @@ class Trainer:
             
             # Save checkpoint
             if self.state.global_step % self.config.save_every == 0:
-                self.save_checkpoint()
+                if not self.is_distributed or self.local_rank == 0:
+                    self.save_checkpoint()
         
         pbar.close()
     
@@ -238,7 +251,11 @@ class Trainer:
         epoch_loss = 0.0
         num_batches = 0
         
-        for batch in tqdm(self.train_dataloader, desc=f"Epoch {self.state.epoch}"):
+        for batch in tqdm(
+            self.train_dataloader,
+            desc=f"Epoch {self.state.epoch}",
+            disable=self.is_distributed and self.local_rank != 0
+        ):
             metrics = self._train_step(batch)
             epoch_loss += metrics['loss']
             num_batches += 1
@@ -250,119 +267,256 @@ class Trainer:
         Perform one training step.
         
         Args:
-            batch: Dictionary with 'input_ids', 'labels', etc.
+            batch: Dictionary with 'input_ids' and optionally 'labels'
         
         Returns:
             Dictionary of metrics
         """
+        # Start timing
+        if self.step_start_time is None:
+            self.step_start_time = time.time()
+        
         # Callback: step begin
         for callback in self.callbacks:
             callback.on_step_begin(self, self.state.step)
         
-        # Move batch to device
-        batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
-                for k, v in batch.items()}
+        # Prepare batch
+        batch = self._prepare_batch(batch)
         
-        # Forward pass
-        if self.config.mixed_precision:
-            # PyTorch 2.1+ requires device_type, older versions don't support it
-            try:
-                with autocast(device_type=self.device.type):
-                    # Get model outputs
-                    outputs = self.model(**batch)
-                    
-                    # Compute loss
-                    if isinstance(outputs, dict) and 'logits' in outputs:
-                        logits = outputs['logits']
-                    else:
-                        logits = outputs
-                    
-                    targets = batch.get('labels', batch.get('target_ids'))
-                    loss, loss_metrics = self.loss_fn.compute(logits, targets)
-                    
-                    # Scale loss for gradient accumulation
-                    loss = loss / self.config.gradient_accumulation_steps
-            except TypeError:
-                # Fallback for older PyTorch versions
-                with autocast():
-                    # Get model outputs
-                    outputs = self.model(**batch)
-                    
-                    # Compute loss
-                    if isinstance(outputs, dict) and 'logits' in outputs:
-                        logits = outputs['logits']
-                    else:
-                        logits = outputs
-                    
-                    targets = batch.get('labels', batch.get('target_ids'))
-                    loss, loss_metrics = self.loss_fn.compute(logits, targets)
-                    
-                    # Scale loss for gradient accumulation
-                    loss = loss / self.config.gradient_accumulation_steps
-        else:
-            # Get model outputs
-            outputs = self.model(**batch)
-            
-            # Compute loss
-            if isinstance(outputs, dict) and 'logits' in outputs:
-                logits = outputs['logits']
-            else:
-                logits = outputs
-            
-            targets = batch.get('labels', batch.get('target_ids'))
-            loss, loss_metrics = self.loss_fn.compute(logits, targets)
-            
-            # Scale loss for gradient accumulation
-            loss = loss / self.config.gradient_accumulation_steps
+        # Forward pass with mixed precision
+        loss, logits = self._forward_pass(batch)
+        
+        # Scale loss for gradient accumulation
+        loss = loss / self.config.gradient_accumulation_steps
         
         # Backward pass
-        if self.config.mixed_precision:
-            self.scaler.scale(loss).backward()
-        else:
-            loss.backward()
+        self._backward_pass(loss)
         
         # Update weights
         self.state.step += 1
         
         if self.state.step % self.config.gradient_accumulation_steps == 0:
             # Gradient clipping
-            if self.config.max_grad_norm > 0:
-                if self.config.mixed_precision:
-                    self.scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(),
-                    self.config.max_grad_norm
-                )
+            grad_norm = self._clip_gradients()
             
             # Optimizer step
-            if self.config.mixed_precision:
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-            else:
-                self.optimizer.step()
+            self._optimizer_step()
             
             # Scheduler step
-            self.scheduler.step()
+            if self.scheduler is not None:
+                self.scheduler.step()
             
             # Zero gradients
             self.optimizer.zero_grad()
             
             # Increment global step
             self.state.global_step += 1
+            
+            # Compute metrics
+            metrics = self._compute_metrics(
+                loss=loss.item() * self.config.gradient_accumulation_steps,
+                logits=logits,
+                targets=batch.get('labels'),
+                grad_norm=grad_norm
+            )
+            
+            # Callback: step end
+            for callback in self.callbacks:
+                callback.on_step_end(self, self.state.step, metrics)
+            
+            # Reset timing
+            self.step_start_time = None
+            
+            return metrics
         
-        # Metrics
-        metrics = {
+        # Return partial metrics for accumulation steps
+        return {
             'loss': loss.item() * self.config.gradient_accumulation_steps,
-            'lr': self.scheduler.get_last_lr()[0],
+            'step': self.state.global_step
+        }
+    
+    def _prepare_batch(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+        """
+        Prepare batch for forward pass.
+        
+        Can be overridden for custom batch handling.
+        """
+        # Move to device
+        prepared = {}
+        for k, v in batch.items():
+            if isinstance(v, torch.Tensor):
+                prepared[k] = v.to(self.device, non_blocking=True)
+            else:
+                prepared[k] = v
+        
+        return prepared
+    
+    def _forward_pass(self, batch: Dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass through model and loss computation.
+        
+        Returns:
+            Tuple of (loss, logits)
+        """
+        if self.use_mixed_precision:
+            try:
+                with autocast(device_type=self.device.type):
+                    return self._compute_loss(batch)
+            except TypeError:
+                # Fallback for older PyTorch
+                with autocast():
+                    return self._compute_loss(batch)
+        else:
+            return self._compute_loss(batch)
+    
+    def _compute_loss(self, batch: Dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Compute loss from batch.
+        
+        Returns:
+            Tuple of (loss, logits)
+        """
+        # Extract labels and remove from batch
+        labels = batch.pop('labels', None)
+        
+        # Remove attention_mask if present (model will auto-generate if needed)
+        # This avoids shape mismatches
+        batch.pop('attention_mask', None)
+        
+        # Get model outputs
+        outputs = self.model(**batch)
+        
+        # Put labels back for potential reuse
+        if labels is not None:
+            batch['labels'] = labels
+        
+        # Extract logits
+        if isinstance(outputs, dict):
+            logits = outputs.get('logits', outputs.get('output'))
+        else:
+            logits = outputs
+        
+        # If no targets, can't compute loss (skip)
+        if labels is None:
+            return torch.tensor(0.0, device=logits.device), logits
+        
+        # Compute loss
+        if hasattr(self.loss_fn, 'compute'):
+            # LossComponent interface
+            loss, _ = self.loss_fn.compute(logits, labels)
+        else:
+            # Standard PyTorch loss
+            # Handle both language modeling (3D logits) and classification (2D logits)
+            if logits.dim() == 3:
+                # Language modeling: (B, S, V) -> (B*S, V) and (B, S) -> (B*S,)
+                loss = self.loss_fn(
+                    logits.view(-1, logits.size(-1)),
+                    labels.view(-1)
+                )
+            else:
+                # Classification: (B, C) and (B,)
+                loss = self.loss_fn(logits, labels)
+        
+        return loss, logits
+    
+    def _backward_pass(self, loss: torch.Tensor):
+        """Backward pass with mixed precision support."""
+        if self.use_mixed_precision:
+            self.scaler.scale(loss).backward()
+        else:
+            loss.backward()
+    
+    def _clip_gradients(self) -> float:
+        """
+        Clip gradients and return norm.
+        
+        Returns:
+            Gradient norm before clipping
+        """
+        if self.config.max_grad_norm <= 0:
+            return 0.0
+        
+        # Unscale if using mixed precision
+        if self.use_mixed_precision:
+            self.scaler.unscale_(self.optimizer)
+        
+        # Get gradient norm and clip
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            self.model.parameters(),
+            self.config.max_grad_norm
+        ).item()
+        
+        return grad_norm
+    
+    def _optimizer_step(self):
+        """Optimizer step with mixed precision support."""
+        if self.use_mixed_precision:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+        else:
+            self.optimizer.step()
+    
+    def _compute_metrics(
+        self,
+        loss: float,
+        logits: torch.Tensor,
+        targets: Optional[torch.Tensor] = None,
+        grad_norm: float = 0.0
+    ) -> Dict[str, float]:
+        """
+        Compute training metrics.
+        
+        Args:
+            loss: Loss value
+            logits: Model logits
+            targets: Target tokens
+            grad_norm: Gradient norm
+        
+        Returns:
+            Dictionary of metrics
+        """
+        metrics = {
+            'loss': loss,
+            'perplexity': math.exp(min(loss, 20)),  # Cap to avoid overflow
+            'lr': self._get_lr(),
             'step': self.state.global_step,
-            **loss_metrics
         }
         
-        # Callback: step end
-        for callback in self.callbacks:
-            callback.on_step_end(self, self.state.step, metrics)
+        # Add gradient norm
+        if grad_norm > 0:
+            metrics['grad_norm'] = grad_norm
+        
+        # Compute throughput if timing available
+        if self.step_start_time is not None:
+            elapsed = time.time() - self.step_start_time
+            if targets is not None:
+                num_tokens = targets.numel()
+                metrics['tokens_per_sec'] = num_tokens / elapsed
+                self.tokens_processed += num_tokens
+        
+        # Compute accuracy if targets available
+        if targets is not None:
+            with torch.no_grad():
+                preds = logits.argmax(dim=-1)
+                # Mask padding tokens if needed
+                if hasattr(self.config, 'pad_token_id') and self.config.pad_token_id is not None:
+                    mask = targets != self.config.pad_token_id
+                    accuracy = (preds == targets)[mask].float().mean().item()
+                else:
+                    accuracy = (preds == targets).float().mean().item()
+                metrics['accuracy'] = accuracy
         
         return metrics
+    
+    def _get_lr(self) -> float:
+        """Get current learning rate."""
+        if self.scheduler is not None:
+            if hasattr(self.scheduler, 'get_last_lr'):
+                lrs = self.scheduler.get_last_lr()
+                return lrs[0] if lrs else 0.0
+        
+        # Fallback to optimizer
+        return self.optimizer.param_groups[0]['lr']
     
     @torch.no_grad()
     def validate(self) -> Dict[str, float]:
@@ -382,7 +536,7 @@ class Trainer:
         self.model.eval()
         
         total_loss = 0.0
-        total_samples = 0
+        total_tokens = 0
         all_metrics = {}
         
         eval_steps = self.config.eval_steps or len(self.val_dataloader)
@@ -391,62 +545,41 @@ class Trainer:
             if i >= eval_steps:
                 break
             
-            # Move to device
-            batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
-                    for k, v in batch.items()}
+            # Prepare batch
+            batch = self._prepare_batch(batch)
             
             # Forward pass
-            if self.config.mixed_precision:
-                try:
-                    with autocast(device_type=self.device.type):
-                        outputs = self.model(**batch)
-                        
-                        if isinstance(outputs, dict) and 'logits' in outputs:
-                            logits = outputs['logits']
-                        else:
-                            logits = outputs
-                        
-                        targets = batch.get('labels', batch.get('target_ids'))
-                        loss, loss_metrics = self.loss_fn.compute(logits, targets)
-                except TypeError:
-                    # Fallback for older PyTorch
-                    with autocast():
-                        outputs = self.model(**batch)
-                        
-                        if isinstance(outputs, dict) and 'logits' in outputs:
-                            logits = outputs['logits']
-                        else:
-                            logits = outputs
-                        
-                        targets = batch.get('labels', batch.get('target_ids'))
-                        loss, loss_metrics = self.loss_fn.compute(logits, targets)
-            else:
-                outputs = self.model(**batch)
-                
-                if isinstance(outputs, dict) and 'logits' in outputs:
-                    logits = outputs['logits']
-                else:
-                    logits = outputs
-                
-                targets = batch.get('labels', batch.get('target_ids'))
-                loss, loss_metrics = self.loss_fn.compute(logits, targets)
+            loss, logits = self._forward_pass(batch)
             
             # Accumulate
-            batch_size = targets.size(0)
-            total_loss += loss.item() * batch_size
-            total_samples += batch_size
-            
-            # Accumulate metrics
-            for key, value in loss_metrics.items():
-                if key not in all_metrics:
-                    all_metrics[key] = 0.0
-                all_metrics[key] += value * batch_size
+            targets = batch.get('labels')
+            if targets is not None:
+                num_tokens = targets.numel()
+                total_loss += loss.item() * num_tokens
+                total_tokens += num_tokens
+                
+                # Compute accuracy
+                preds = logits.argmax(dim=-1)
+                if hasattr(self.config, 'pad_token_id') and self.config.pad_token_id is not None:
+                    mask = targets != self.config.pad_token_id
+                    acc = (preds == targets)[mask].float().mean().item()
+                else:
+                    acc = (preds == targets).float().mean().item()
+                
+                if 'accuracy' not in all_metrics:
+                    all_metrics['accuracy'] = 0.0
+                all_metrics['accuracy'] += acc * num_tokens
         
         # Average metrics
+        avg_loss = total_loss / total_tokens if total_tokens > 0 else 0.0
         val_metrics = {
-            'val_loss': total_loss / total_samples,
-            **{f'val_{k}': v / total_samples for k, v in all_metrics.items()}
+            'val_loss': avg_loss,
+            'val_perplexity': math.exp(min(avg_loss, 20)),
         }
+        
+        # Add other averaged metrics
+        for key, value in all_metrics.items():
+            val_metrics[f'val_{key}'] = value / total_tokens if total_tokens > 0 else 0.0
         
         self.model.train()
         
@@ -468,20 +601,30 @@ class Trainer:
             checkpoint_dir.mkdir(exist_ok=True, parents=True)
             path = checkpoint_dir / f'checkpoint_step_{self.state.global_step}.pt'
         else:
-            # Ensure parent directory exists
             Path(path).parent.mkdir(exist_ok=True, parents=True)
         
+        # Get model state dict (unwrap DDP if needed)
+        model_to_save = self.model.module if isinstance(self.model, DDP) else self.model
+        
         checkpoint = {
-            'model': self.model.state_dict(),
+            'model': model_to_save.state_dict(),
             'optimizer': self.optimizer.state_dict(),
-            'scheduler': self.scheduler.state_dict(),
             'state': self.state.to_dict(),
             'config': self.config.to_dict(),
-            'scaler': self.scaler.state_dict() if self.scaler else None
         }
         
+        # Add scheduler if present
+        if self.scheduler is not None:
+            checkpoint['scheduler'] = self.scheduler.state_dict()
+        
+        # Add scaler if using mixed precision
+        if self.scaler is not None:
+            checkpoint['scaler'] = self.scaler.state_dict()
+        
         torch.save(checkpoint, path)
-        print(f"💾 Checkpoint saved: {path}")
+        
+        if not self.is_distributed or self.local_rank == 0:
+            print(f"💾 Checkpoint saved: {path}")
         
         # Cleanup old checkpoints
         self._cleanup_checkpoints()
@@ -495,24 +638,37 @@ class Trainer:
         """
         checkpoint = torch.load(path, map_location=self.device)
         
-        self.model.load_state_dict(checkpoint['model'])
+        # Load model (handle DDP wrapper)
+        model_to_load = self.model.module if isinstance(self.model, DDP) else self.model
+        model_to_load.load_state_dict(checkpoint['model'])
+        
+        # Load optimizer
         self.optimizer.load_state_dict(checkpoint['optimizer'])
-        self.scheduler.load_state_dict(checkpoint['scheduler'])
+        
+        # Load scheduler if present
+        if 'scheduler' in checkpoint and self.scheduler is not None:
+            self.scheduler.load_state_dict(checkpoint['scheduler'])
+        
+        # Load state
         self.state = TrainingState.from_dict(checkpoint['state'])
         
-        if self.scaler and checkpoint['scaler']:
+        # Load scaler if using mixed precision
+        if 'scaler' in checkpoint and self.scaler is not None:
             self.scaler.load_state_dict(checkpoint['scaler'])
         
         print(f"📂 Checkpoint loaded: {path}")
         print(f"   Resuming from step {self.state.global_step}")
     
     def _cleanup_checkpoints(self):
-        """Remove old checkpoints, keeping only the N best."""
+        """Remove old checkpoints, keeping only the N most recent."""
         checkpoint_dir = Path(self.config.output_dir) / 'checkpoints'
         if not checkpoint_dir.exists():
             return
         
-        checkpoints = sorted(checkpoint_dir.glob('checkpoint_step_*.pt'))
+        checkpoints = sorted(
+            checkpoint_dir.glob('checkpoint_step_*.pt'),
+            key=lambda p: int(p.stem.split('_')[-1])
+        )
         
         if len(checkpoints) > self.config.save_total_limit:
             for ckpt in checkpoints[:-self.config.save_total_limit]:
@@ -522,11 +678,14 @@ class Trainer:
         """Log metrics to console and callbacks."""
         # Add prefix
         if prefix:
-            metrics = {f'{prefix}/{k}': v for k, v in metrics.items()}
+            metrics = {f'{prefix}/{k}' if not k.startswith(prefix) else k: v 
+                      for k, v in metrics.items()}
         
         # Store in history
         self.state.metrics_history.append(metrics)
         
-        # Print to console
-        metrics_str = ', '.join([f'{k}: {v:.4f}' for k, v in metrics.items()])
-        print(f"Step {self.state.global_step}: {metrics_str}")
+        # Print to console (only on main process)
+        if not self.is_distributed or self.local_rank == 0:
+            metrics_str = ', '.join([f'{k}: {v:.4f}' if isinstance(v, float) else f'{k}: {v}' 
+                                    for k, v in metrics.items()])
+            print(f"Step {self.state.global_step}: {metrics_str}")
