@@ -357,6 +357,63 @@ class ComputationGraph:
         
         return set(self.nodes.keys()) - reachable
     
+    def validate_shapes(
+        self,
+        input_shapes: Dict[str, Tuple[int, ...]],
+        strict: bool = True
+    ) -> Dict[str, Dict[str, Tuple[int, ...]]]:
+        """
+        Validate shapes flow correctly through graph.
+        
+        This is a convenience wrapper around shape_inference module.
+        
+        Args:
+            input_shapes: Shapes for input nodes (node_id -> shape)
+            strict: If True, raise on first error
+        
+        Returns:
+            Inferred shapes for all nodes (node_id -> {output_name -> shape})
+        
+        Raises:
+            ValueError: If strict=True and incompatible shapes found
+        
+        Example:
+            >>> graph = ComputationGraph.from_sequential([...])
+            >>> shapes = graph.validate_shapes({'node_0': (8, 512)})
+            >>> print(shapes['node_1'])  # Output shapes from node_1
+        """
+        from ramanujan.core.shape_inference import infer_shapes
+        return infer_shapes(self, input_shapes, strict=strict)
+
+    def estimate_cost(
+        self,
+        input_shapes: Dict[str, Tuple[int, ...]],
+        detailed: bool = False
+    ) -> 'ComputeCost':
+        """
+        Estimate computational cost.
+        
+        Convenience wrapper around cost_estimation module.
+        
+        Args:
+            input_shapes: Shapes for input nodes
+            detailed: Include per-node breakdown
+        
+        Returns:
+            ComputeCost estimate
+        
+        Example:
+            >>> graph = ComputationGraph.from_sequential([...])
+            >>> cost = graph.estimate_cost({'node_0': (8, 512)})
+            >>> print(f"FLOPs: {cost.flops:,}, Params: {cost.params:,}")
+            >>> 
+            >>> # With breakdown
+            >>> cost = graph.estimate_cost({'node_0': (8, 512)}, detailed=True)
+            >>> print(cost.summary())
+        """
+        from ramanujan.core.cost_estimation import estimate_cost
+        return estimate_cost(self, input_shapes, detailed=detailed)
+
     def validate(self) -> bool:
         """
         Validate graph structure.

@@ -558,14 +558,82 @@ class ModelBuilder:
 
 
 # Convenience function
-def build_model(graph: ComputationGraph, **kwargs) -> nn.Module:
+def build_model(
+    graph,
+    validate_shapes: bool = False,
+    input_shapes: Optional[Dict[str, Tuple[int, ...]]] = None,
+    estimate_cost: bool = False,
+    manage_state: bool = False,
+    **kwargs
+):
     """
-    Build model from graph (convenience function).
+    Build executable model from computation graph.
+    
+    Args:
+        graph: Validated ComputationGraph
+        validate_shapes: Run shape validation before building
+        input_shapes: Input shapes for validation/cost estimation
+        estimate_cost: Print cost estimate before building
+        manage_state: Wrap with state management for stateful components
+        **kwargs: Additional options (e.g., compile=True)
+    
+    Returns:
+        Executable nn.Module (possibly wrapped with StateManager)
     
     Example:
-        >>> from ramanujan.core import build_model, ComputationGraph
-        >>> 
-        >>> graph = ComputationGraph.from_sequential([...])
+        >>> # Basic usage
         >>> model = build_model(graph)
+        >>> 
+        >>> # With validation
+        >>> model = build_model(
+        ...     graph,
+        ...     validate_shapes=True,
+        ...     input_shapes={'input': (8, 512)}
+        ... )
+        >>> 
+        >>> # With state management
+        >>> model = build_model(graph, manage_state=True)
+        >>> output = model(x)  # State automatically managed
+        >>> model.reset_state()  # Reset between sequences
     """
-    return ModelBuilder.build(graph, **kwargs)
+    # Validate shapes if requested
+    if validate_shapes:
+        if input_shapes is None:
+            raise ValueError("validate_shapes=True requires input_shapes")
+        
+        print("Validating shapes...")
+        try:
+            shapes = graph.validate_shapes(input_shapes)
+            print(f"✓ Shape validation passed for {len(shapes)} nodes")
+        except ValueError as e:
+            print(f"✗ Shape validation failed: {e}")
+            raise
+    
+    # Estimate cost if requested
+    if estimate_cost:
+        if input_shapes is None:
+            raise ValueError("estimate_cost=True requires input_shapes")
+        
+        print("Estimating computational cost...")
+        cost = graph.estimate_cost(input_shapes)
+        print(f"Estimated cost: {cost}")
+    
+    # Build model
+    executor = GraphExecutor(graph)
+    
+    # Wrap with state management if requested
+    if manage_state:
+        from ramanujan.core.state_manager import StatefulWrapper
+        executor = StatefulWrapper(executor)
+        print(f"✓ State management enabled for {len(executor.state_manager.stateful_components)} components")
+    
+    # Optional: Compile with torch.compile (PyTorch 2.0+)
+    if kwargs.get('compile', False):
+        try:
+            import torch
+            executor = torch.compile(executor)
+            print("✓ Model compiled with torch.compile")
+        except Exception as e:
+            print(f"Warning: torch.compile failed: {e}")
+    
+    return executor
