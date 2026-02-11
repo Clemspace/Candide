@@ -1,0 +1,61 @@
+# Phase 1: Basic French TTS
+# Single speaker, neutral emotion, ~30M parameters
+
+name: french-tts-phase1
+version: "1.0"
+
+model:
+  n_phonemes: 42
+  phoneme_dim: 256
+  n_speakers: 1
+  speaker_dim: 256
+  style_dim: 256
+  prosody_hidden_dim: 256
+  n_duration_layers: 4
+  n_f0_layers: 4
+  n_energy_layers: 2
+  n_mels: 80
+  acoustic_hidden_channels: 256
+  acoustic_channel_mults: [1, 2, 4]
+  n_flow_steps: 10
+  dropout: 0.1
+
+training:
+  epochs: 50
+  batch_size: 16
+  gradient_accumulation: 1
+  gradient_clip: 1.0
+  
+  loss_weights:
+    mel: 1.0
+    duration: 0.1
+    f0: 0.1
+    energy: 0.05
+
+optimizer:
+  type: adamw
+  lr: 1e-4
+  betas: [0.9, 0.98]
+  weight_decay: 1e-6
+
+scheduler:
+  type: warmup_cosine
+  warmup_steps: 4000
+  min_lr: 1e-6
+
+data:
+  train_manifest: null  # Set via command line
+  val_manifest: null
+  max_phoneme_len: 500
+  max_frames: 1000
+  num_workers: 4
+
+logging:
+  log_every: 100
+  eval_every: 1000
+  save_every: 5000
+  project: candide_tts_phase1
+
+checkpoint:
+  dir: ./checkpoints/phase1
+  keep_last: 3

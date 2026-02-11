@@ -1,0 +1,203 @@
+# French TTS Small Model Configuration
+# ~70M parameters, suitable for training on single GPU
+
+name: french-tts-small
+version: "1.0"
+description: "Small French TTS model with emotion and accent control"
+
+# =============================================================================
+# MODEL CONFIGURATION
+# =============================================================================
+model:
+  type: tts
+  variant: flow_matching
+  
+  # Phoneme configuration
+  phonemes:
+    vocab_size: 50          # French IPA phonemes + special tokens
+    embedding_dim: 256
+  
+  # Style system
+  style:
+    n_accents: 7            # neutre, parisien, méridional, québécois, suisse, belge, africain
+    n_emotions: 9           # neutre, joie, tristesse, colère, peur, surprise, dégoût, hésitation, ironie
+    n_speakers: 10          # Expandable
+    accent_dim: 64
+    emotion_dim: 32
+    speaker_dim: 128
+    fusion_hidden_dim: 256
+    
+  # Prosody system  
+  prosody:
+    hidden_dim: 256
+    duration_layers: 4
+    f0_layers: 4
+    energy_layers: 2
+    f0_min: 50.0            # Hz
+    f0_max: 800.0           # Hz
+    
+  # Acoustic decoder (Flow Matching)
+  acoustic:
+    n_mels: 80
+    hidden_channels: 256
+    channel_mults: [1, 2, 4]
+    n_res_blocks: 2
+    flow_steps_train: 1000
+    flow_steps_inference: 10
+    
+  # General
+  dropout: 0.1
+
+# =============================================================================
+# TRAINING CONFIGURATION
+# =============================================================================
+training:
+  # Phased training for stable convergence
+  phases:
+    - name: phase1_basic
+      description: "Basic acoustic model with single speaker"
+      epochs: 50
+      batch_size: 16
+      freeze: []
+      loss_weights:
+        mel: 1.0
+        duration: 0.1
+        f0: 0.1
+        energy: 0.05
+      
+    - name: phase2_multispeaker
+      description: "Add multi-speaker capability"
+      epochs: 30
+      batch_size: 16
+      freeze: []
+      unfreeze_only: [style_system.speaker_encoder]
+      loss_weights:
+        mel: 1.0
+        duration: 0.1
+        f0: 0.1
+        energy: 0.05
+        
+    - name: phase3_style
+      description: "Add emotion and accent control"
+      epochs: 30
+      batch_size: 16
+      freeze: [style_system.speaker_encoder]
+      unfreeze_only: [style_system.emotion_encoder, style_system.accent_encoder, style_system.fusion]
+      loss_weights:
+        mel: 1.0
+        duration: 0.1
+        f0: 0.1
+        energy: 0.05
+        
+    - name: phase4_finetune
+      description: "Joint finetuning"
+      epochs: 20
+      batch_size: 8
+      learning_rate_mult: 0.1
+      freeze: []
+      loss_weights:
+        mel: 1.0
+        duration: 0.1
+        f0: 0.1
+        energy: 0.05
+
+# =============================================================================
+# OPTIMIZER CONFIGURATION
+# =============================================================================
+optimizer:
+  type: adamw
+  lr: 1e-4
+  betas: [0.9, 0.98]
+  eps: 1e-9
+  weight_decay: 1e-6
+
+# =============================================================================
+# SCHEDULER CONFIGURATION
+# =============================================================================
+scheduler:
+  type: warmup_cosine
+  warmup_steps: 4000
+  min_lr: 1e-6
+
+# =============================================================================
+# DATA CONFIGURATION
+# =============================================================================
+data:
+  type: french_tts
+  
+  # Paths (override in environment or command line)
+  train_manifest: null      # JSON manifest with audio paths + transcripts
+  val_manifest: null
+  
+  # Audio settings
+  sample_rate: 22050
+  n_fft: 1024
+  hop_length: 256
+  win_length: 1024
+  n_mels: 80
+  fmin: 0.0
+  fmax: 8000.0
+  
+  # Processing
+  max_duration: 10.0        # seconds
+  min_duration: 0.5         # seconds
+  max_phoneme_len: 500
+  
+  # G2P
+  g2p_backend: auto         # 'phonemizer', 'rules', or 'auto'
+  
+  # Data loading
+  num_workers: 4
+  pin_memory: true
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+logging:
+  use_wandb: true
+  project: candide_tts
+  
+  # Logging frequency
+  log_every_n_steps: 100
+  eval_every_n_steps: 1000
+  log_audio_every_n_steps: 5000
+  
+  # What to log
+  log_gradients: true
+  log_mel_images: true
+  log_f0_plots: true
+  log_embeddings: false     # t-SNE of style embeddings (expensive)
+  
+  # Audio samples
+  n_audio_samples: 4
+  sample_texts:
+    - "Bonjour, comment allez-vous aujourd'hui?"
+    - "Je suis très content de vous voir."
+    - "Enfin, je ne sais pas vraiment quoi dire."
+    - "C'est une belle journée pour se promener."
+
+# =============================================================================
+# CHECKPOINT CONFIGURATION
+# =============================================================================
+checkpoint:
+  dir: ./checkpoints/french-tts-small
+  save_every_n_epochs: 5
+  save_every_n_steps: null
+  keep_last_n: 3
+  save_best: true
+  best_metric: val/mcd      # Lower is better
+
+# =============================================================================
+# EVALUATION CONFIGURATION
+# =============================================================================
+evaluation:
+  metrics:
+    - mcd                   # Mel Cepstral Distortion
+    - f0_rmse              # F0 RMSE (Hz)
+    - f0_correlation       # F0 Pearson correlation
+    - duration_mae         # Duration MAE (frames)
+    - voicing_accuracy     # Voicing classification accuracy
+  
+  # Evaluation sets
+  eval_on_train: false
+  n_eval_batches: 50
