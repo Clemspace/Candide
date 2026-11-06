@@ -133,20 +133,23 @@ def test_text_dataset_padding(mock_tokenizer):
     assert item['input_ids'].shape == (10,)
 
 
-def test_text_dataset_labels_match_input(mock_tokenizer, sample_texts):
-    """Test labels match input_ids for causal LM."""
-    dataset = TextDataset(
-        texts=sample_texts,
-        tokenizer=mock_tokenizer,
-        max_length=20,
-        min_chunk_size=1,
-        verbose=False
-    )
-    
+def test_text_dataset_labels_are_shifted_inputs(mock_tokenizer, sample_texts):
+    """Causal LM: labels[t] = input_ids[t+1]; last position ignored."""
+    dataset = TextDataset(texts=sample_texts, tokenizer=mock_tokenizer,
+                          max_length=20, min_chunk_size=1, verbose=False)
     item = dataset[0]
-    
-    # For causal LM, labels should equal input_ids
-    assert torch.equal(item['input_ids'], item['labels'])
+    assert torch.equal(item['labels'][:-1], item['input_ids'][1:])
+    assert item['labels'][-1].item() == -100
+
+
+def test_text_dataset_padding_not_trained(mock_tokenizer):
+    """Every real token but the last has a target; nothing after it does."""
+    dataset = TextDataset(texts=["hi"], tokenizer=mock_tokenizer,
+                          max_length=10, min_chunk_size=1, verbose=False)
+    item = dataset[0]
+    n_real = int((item['input_ids'] != mock_tokenizer.pad_token_id).sum())
+    assert (item['labels'][:n_real - 1] != -100).all()
+    assert (item['labels'][n_real - 1:] == -100).all()
 
 
 def test_text_dataset_metadata(mock_tokenizer, sample_texts):
@@ -185,6 +188,22 @@ def test_memory_mapped_dataset_requires_cache_file():
     """Test memory mapped dataset requires cache file."""
     with pytest.raises(ValueError, match="cache_file must be provided"):
         MemoryMappedTextDataset(cache_file=None)
+
+def test_memory_mapped_dataset_masks_padding(mock_tokenizer, tmp_path):
+    text = "a" * 40   # 40 tokens, padded to 64
+    ds = MemoryMappedTextDataset(texts=[text], tokenizer=mock_tokenizer, max_length=64,
+                                 cache_file=str(tmp_path / "c.mmap"), verbose=False)
+    item = ds[0]
+    assert (item['labels'][:39] != -100).all()
+    assert (item['labels'][39:] == -100).all()
+
+
+def test_memory_mapped_dataset_reloads_cache(mock_tokenizer, tmp_path):
+    path = str(tmp_path / "c.mmap")
+    MemoryMappedTextDataset(texts=["a" * 40], tokenizer=mock_tokenizer, max_length=64,
+                            cache_file=path, verbose=False)
+    reloaded = MemoryMappedTextDataset(cache_file=path, max_length=64, verbose=False)
+    assert len(reloaded) == 1   # loads from disk; no texts/tokenizer needed       
 
 
 # ============================================================================

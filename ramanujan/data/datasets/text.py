@@ -110,25 +110,21 @@ class TextDataset(TokenizedDataset):
         return len(self.sequences)
     
     def __getitem__(self, idx: int) -> Dict[str, Tensor]:
-        """
-        Get a tokenized sequence.
-        
-        Args:
-            idx: Index
-        
-        Returns:
-            Dictionary with 'input_ids' and 'labels'
-        """
+        """Get a tokenized sequence."""
         seq = self.sequences[idx]
+        n_real = len(seq)                      # length before padding
         
-        # Pad if necessary
-        if len(seq) < self.max_length:
+        if n_real < self.max_length:
             seq = self._pad_sequence(seq)
+        
+
         
         input_ids = torch.tensor(seq, dtype=torch.long)
         
-        # For causal LM, labels are the same as input_ids
-        labels = input_ids.clone()
+        # Causal LM: labels[t] = input_ids[t+1] for real tokens only.
+        # Padded positions and the last real position are ignored (-100).
+        labels = torch.full_like(input_ids, -100)          # CHANGED
+        labels[: n_real - 1] = input_ids[1:n_real]         # CHANGED
         
         item = {
             'input_ids': input_ids,
@@ -290,6 +286,10 @@ class StreamingTextDataset(StreamingDataset):
                 tokens = tokens.tolist()
             
             self.token_buffer.extend(tokens)
+
+            # Append EOS token if present( edge case for document splitting)
+            if getattr(self.tokenizer, 'eos_token_id', None) is not None:   
+                self.token_buffer.append(self.tokenizer.eos_token_id)     
         
         # Extract sequence
         input_ids = self.token_buffer[:self.max_length]
@@ -297,7 +297,9 @@ class StreamingTextDataset(StreamingDataset):
         
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         labels = input_ids.clone()
-        
+        labels[:-1] = input_ids[1:]  # Shift left
+        labels[-1] = -100  # Ignore last position (no next token to predict)    
+
         item = {
             'input_ids': input_ids,
             'labels': labels
@@ -358,6 +360,10 @@ class MemoryMappedTextDataset(TokenizedDataset):
         
         cache_path = Path(cache_file)
         
+        if cache_path.suffix != '.npy':                        # NEW: match what np.save writes
+            cache_path = cache_path.with_suffix(cache_path.suffix + '.npy')
+        self._lengths_path = cache_path.with_suffix('.lengths.npy')  
+        
         # Build or load cache
         if rebuild_cache or not cache_path.exists():
             if texts is None or tokenizer is None:
@@ -414,13 +420,17 @@ class MemoryMappedTextDataset(TokenizedDataset):
             padded_seq = self._pad_sequence(seq)
             data[i] = padded_seq
         
+        lengths = np.array([len(s) for s in sequences], dtype=np.int32)   # NEW
+
         # Save as memory-mapped file
         np.save(str(cache_path), data)
+        np.save(str(self._lengths_path), lengths)
         
         if verbose:
             print(f"   ✅ Cached {num_sequences} sequences")
         
         self.sequences = data
+        self.lengths = lengths
     
     def _load_cache(self, cache_path: Path):
         """Load cache from disk."""
@@ -431,6 +441,12 @@ class MemoryMappedTextDataset(TokenizedDataset):
             str(cache_path),
             mmap_mode='r'  # Read-only memory map
         )
+        if not self._lengths_path.exists():                               
+            raise FileNotFoundError(
+                f"{self._lengths_path} missing: cache predates length tracking, "
+                f"rebuild with rebuild_cache=True"
+            )
+        self.lengths = np.load(str(self._lengths_path))                   
     
     def __len__(self) -> int:
         return len(self.sequences)
@@ -438,10 +454,12 @@ class MemoryMappedTextDataset(TokenizedDataset):
     def __getitem__(self, idx: int) -> Dict[str, Tensor]:
         """Get sequence from memory-mapped array."""
         seq = self.sequences[idx]
+        n_real = int(self.lengths[idx])
         
         input_ids = torch.tensor(seq, dtype=torch.long)
-        labels = input_ids.clone()
-        
+        labels = torch.full_like(input_ids, -100)                         # CHANGED
+        labels[: n_real - 1] = input_ids[1:n_real]                        # CHANGED
+            
         item = {
             'input_ids': input_ids,
             'labels': labels
