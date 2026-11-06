@@ -97,6 +97,7 @@ class RamanujanTransformer(nn.Module):
                 n_kv_heads=config.n_kv_heads,
                 rope=self.rope,  # Share RoPE across layers
                 bias=config.bias,
+                qk_norm=config.qk_norm,
             )
             for _ in range(config.n_layers)
         ])

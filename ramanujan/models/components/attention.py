@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import math
 
 from .base import BaseAttention
+from .normalization import RMSNorm
 
 
 class MultiHeadAttention(BaseAttention):
@@ -34,6 +35,7 @@ class MultiHeadAttention(BaseAttention):
         bias: bool = True,
         pruning_mask: Optional[Tensor] = None,
         rope: Optional[nn.Module] = None,
+        qk_norm: bool = False,
         **kwargs
     ):
         """
@@ -46,6 +48,7 @@ class MultiHeadAttention(BaseAttention):
             bias: Whether to use bias in projections
             pruning_mask: Optional mask for pruning
             rope: Optional RoPE module for position encoding
+            qk_norm: RMSNorm q and k over head_dim before RoPE (QK-norm)
             **kwargs: Additional arguments
         """
         super().__init__(
@@ -58,6 +61,13 @@ class MultiHeadAttention(BaseAttention):
         )
         
         self.rope = rope
+
+        # QK-norm (Henry et al., 2020): RMSNorm with learnable scale over head_dim.
+        # With the 1/sqrt(head_dim) softmax scale this gives logits of
+        # sqrt(head_dim) * cos(q, k) at init.
+        self.qk_norm = qk_norm
+        self.q_norm = RMSNorm(self.head_dim) if qk_norm else None
+        self.k_norm = RMSNorm(self.head_dim) if qk_norm else None
         
         # Q, K, V projections
         self.q_proj = nn.Linear(d_model, d_model, bias=bias)
@@ -124,6 +134,11 @@ class MultiHeadAttention(BaseAttention):
         k = k.view(batch_size, seq_len, self.n_heads, self.head_dim).transpose(1, 2)
         v = v.view(batch_size, seq_len, self.n_heads, self.head_dim).transpose(1, 2)
         
+        # QK-norm (before RoPE; RoPE is a rotation and preserves the norm)
+        if self.qk_norm:
+            q = self.q_norm(q)
+            k = self.k_norm(k)
+
         # Apply RoPE if provided
         if self.rope is not None:
             q, k = self.rope(q, k, position_ids=position_ids)
@@ -210,6 +225,7 @@ class GroupedQueryAttention(BaseAttention):
         bias: bool = False,
         pruning_mask: Optional[Tensor] = None,
         rope: Optional[nn.Module] = None,
+        qk_norm: bool = False,
         **kwargs
     ):
         """
@@ -223,6 +239,7 @@ class GroupedQueryAttention(BaseAttention):
             bias: Whether to use bias (typically False for LLaMA-style)
             pruning_mask: Optional mask for pruning
             rope: Optional RoPE module
+            qk_norm: RMSNorm q and k over head_dim before RoPE (QK-norm)
             **kwargs: Additional arguments
         """
         super().__init__(
@@ -245,6 +262,13 @@ class GroupedQueryAttention(BaseAttention):
         self.kv_head_dim = self.head_dim
         
         self.rope = rope
+
+        # QK-norm (Henry et al., 2020): RMSNorm with learnable scale over head_dim.
+        # With the 1/sqrt(head_dim) softmax scale this gives logits of
+        # sqrt(head_dim) * cos(q, k) at init.
+        self.qk_norm = qk_norm
+        self.q_norm = RMSNorm(self.head_dim) if qk_norm else None
+        self.k_norm = RMSNorm(self.head_dim) if qk_norm else None
         
         # Q projection (all heads)
         self.q_proj = nn.Linear(d_model, d_model, bias=bias)
@@ -336,6 +360,11 @@ class GroupedQueryAttention(BaseAttention):
         k = k.view(batch_size, seq_len, self.n_kv_heads, self.kv_head_dim).transpose(1, 2)
         v = v.view(batch_size, seq_len, self.n_kv_heads, self.kv_head_dim).transpose(1, 2)
         
+        # QK-norm (before RoPE; RoPE is a rotation and preserves the norm)
+        if self.qk_norm:
+            q = self.q_norm(q)
+            k = self.k_norm(k)
+
         # Apply RoPE if provided
         if self.rope is not None:
             q, k = self.rope(q, k, position_ids=position_ids)

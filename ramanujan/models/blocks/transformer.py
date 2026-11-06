@@ -73,6 +73,7 @@ class TransformerBlock(BaseTransformerBlock):
         n_kv_heads: Optional[int] = None,
         rope: Optional[nn.Module] = None,
         bias: bool = False,
+        qk_norm: bool = False,
         **kwargs
     ):
         """Initialize transformer block."""
@@ -94,6 +95,7 @@ class TransformerBlock(BaseTransformerBlock):
             dropout=dropout,
             bias=bias,
             rope=rope,
+            qk_norm=qk_norm,
         )
         
         # Feedforward
@@ -256,3 +258,116 @@ def create_transformer_block(
         config = kwargs
     
     return TransformerBlock(d_model=d_model, n_heads=n_heads, **config)
+
+import math as _math
+from ..components.modern_attention import LocalAttention, GlobalAttention
+
+
+class AlternatingTransformerBlock(nn.Module):
+    """
+    ModernBERT-style alternating local/global attention block.
+
+    Even-indexed layers: LocalAttention (sliding window, ±window_size tokens)
+    Odd-indexed layers:  GlobalAttention (full bidirectional, Flash Attention)
+
+    The FFN and norms are identical to TransformerBlock — only the attention
+    mechanism alternates. This is a drop-in replacement for TransformerBlock
+    in the encoder; the decoder should keep using TransformerBlock with causal GQA.
+
+    Args:
+        layer_idx: Layer index (0-based). Determines local vs global.
+        window_size: Local attention window (one-sided). Default: 128.
+        All other args: same as TransformerBlock.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        n_heads: int,
+        layer_idx: int,
+        d_ff: Optional[int] = None,
+        dropout: float = 0.0,
+        norm_first: bool = True,
+        norm_type: str = 'rms',
+        ffn_type: str = 'swiglu',
+        n_kv_heads: Optional[int] = None,
+        rope: Optional[nn.Module] = None,
+        bias: bool = False,
+        window_size: int = 128,
+        n_layers: int = 12,          # needed for depth-scaled init
+        **kwargs,
+    ):
+        super().__init__()
+
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.layer_idx = layer_idx
+        self.norm_first = norm_first
+        self.is_local = (layer_idx % 2 == 0)  # even → local, odd → global
+
+        attn_kwargs = dict(
+            d_model=d_model,
+            n_heads=n_heads,
+            n_kv_heads=n_kv_heads if n_kv_heads is not None else max(1, n_heads // 4),
+            dropout=dropout,
+            bias=bias,
+            rope=rope,
+        )
+
+        if self.is_local:
+            self.attention = LocalAttention(**attn_kwargs, window_size=window_size)
+        else:
+            self.attention = GlobalAttention(**attn_kwargs)
+
+        d_ff = d_ff or 4 * d_model
+        self.ffn = get_feedforward(
+            ffn_type=ffn_type,
+            d_model=d_model,
+            d_ff=d_ff,
+            dropout=dropout,
+            bias=bias,
+        )
+
+        self.norm1 = get_normalization(norm_type, d_model)
+        self.norm2 = get_normalization(norm_type, d_model)
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else None
+
+        # Depth-scaled init on output projections (ModernBERT / GPT-NeoX)
+        # std = 0.02 / sqrt(2 * n_layers) for residual stream stability
+        depth_std = 0.02 / _math.sqrt(2 * n_layers)
+        attn_module = self.attention.attn if self.is_local else self.attention
+        nn.init.normal_(attn_module.out_proj.weight, mean=0.0, std=depth_std)
+        for proj_name in ('w2', 'down_proj', 'fc2'):
+            if hasattr(self.ffn, proj_name):
+                nn.init.normal_(getattr(self.ffn, proj_name).weight, mean=0.0, std=depth_std)
+                break
+
+    def forward(
+        self,
+        x: Tensor,
+        mask: Optional[Tensor] = None,
+        position_ids: Optional[Tensor] = None,
+        past_key_value=None,
+        use_cache: bool = False,
+        **kwargs,
+    ) -> Tuple[Tensor, None]:
+        if self.norm_first:
+            attn_out, _ = self.attention(self.norm1(x), mask=mask, position_ids=position_ids)
+            if self.dropout is not None:
+                attn_out = self.dropout(attn_out)
+            x = x + attn_out
+            ffn_out = self.ffn(self.norm2(x))
+            if self.dropout is not None:
+                ffn_out = self.dropout(ffn_out)
+            x = x + ffn_out
+        else:
+            attn_out, _ = self.attention(x, mask=mask, position_ids=position_ids)
+            if self.dropout is not None:
+                attn_out = self.dropout(attn_out)
+            x = self.norm1(x + attn_out)
+            ffn_out = self.ffn(x)
+            if self.dropout is not None:
+                ffn_out = self.dropout(ffn_out)
+            x = self.norm2(x + ffn_out)
+
+        return x, None

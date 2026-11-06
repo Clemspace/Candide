@@ -79,6 +79,7 @@ class TransformerConfig:
     use_rope: bool = True
     rope_theta: float = 10000.0
     bias: bool = False
+    qk_norm: bool = False
     
     # Special tokens
     pad_token_id: Optional[int] = None
