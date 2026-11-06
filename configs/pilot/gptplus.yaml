@@ -1,0 +1,44 @@
+# GPT+ baseline for the anGPT pilot: current Candide decoder + QK-norm.
+# Same data, tokenizer, model size and batch as anGPT; only the arm-specific
+# lines (arch, qk_norm, weight_decay, warmup) differ.
+model:
+  arch: gpt
+  qk_norm: true
+  vocab_size: 32132
+  d_model: 768
+  n_layers: 8
+  n_heads: 12
+  n_kv_heads: 4
+  d_ff: 3072
+  max_seq_len: 1024
+  dropout: 0.0              # both arms: single-epoch pilot, no dropout
+  norm_first: true
+  norm_type: rms
+  attention_type: gqa
+  ffn_type: swiglu
+  use_rope: true
+  rope_theta: 10000.0
+  bias: false
+  tie_word_embeddings: false
+
+training:
+  max_steps: 4578           # 4578 x 64 x 1024 = 300M tokens
+  batch_size: 8
+  gradient_accumulation_steps: 8
+  learning_rate: 6.0e-4
+  weight_decay: 0.1
+  grad_clip: 1.0
+  warmup_steps: 458         # 10% of max_steps
+  min_lr: 6.0e-5            # lr / 10
+  mixed_precision: bf16
+  eval_every: 250
+  eval_steps: 50
+  save_every: 100000        # pilots: final checkpoint only
+  log_every: 10
+  seed: 1
+
+logging:
+  wandb_project: candide-18c
+  wandb_run_name: pilot-gptplus
+  wandb_tags: [candide, 18c-french, pilot, angpt-vs-gptplus]
+  output_dir: ./runs/pilot/gptplus

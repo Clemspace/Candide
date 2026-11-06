@@ -1,0 +1,43 @@
+# anGPT arm of the pilot (Franke et al., arXiv:2505.22014).
+# Differs from gptplus.yaml only in: arch, weight_decay (0), warmup (0), LR.
+model:
+  arch: angpt
+  vocab_size: 32132
+  d_model: 768
+  n_layers: 8
+  n_heads: 12
+  n_kv_heads: 4
+  d_ff: 3072
+  max_seq_len: 1024
+  dropout: 0.0
+  attention_type: gqa
+  use_rope: true
+  rope_theta: 10000.0
+  bias: false
+  tie_word_embeddings: false
+  alpha_init: 0.05
+  alpha_scale: 0.01
+  residual_mode: approx
+  gate_scale: 1.0           # paper; sqrt(768) ~ 27.7 = nGPT-style ablation
+
+training:
+  max_steps: 4578
+  batch_size: 8
+  gradient_accumulation_steps: 8
+  learning_rate: 2.0e-3
+  weight_decay: 0.0
+  grad_clip: 1.0
+  warmup_steps: 0
+  min_lr: 2.0e-4            # lr / 10
+  mixed_precision: bf16
+  eval_every: 250
+  eval_steps: 50
+  save_every: 100000
+  log_every: 10
+  seed: 1
+
+logging:
+  wandb_project: candide-18c
+  wandb_run_name: pilot-angpt
+  wandb_tags: [candide, 18c-french, pilot, angpt-vs-gptplus]
+  output_dir: ./runs/pilot/angpt
