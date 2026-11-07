@@ -99,6 +99,12 @@ class DataConfig:
     num_workers: int = 2
     prefetch_factor: int = 4
     pin_memory: bool = True
+    # "global": windows shuffled across all shards every epoch (default).
+    # "sequential": legacy order, contiguous text within a batch (runs before 2026-11-07).
+    train_order: str = "global"
+    # Fixed random validation sample, identical for every run (None = legacy stream).
+    val_windows: Optional[int] = 1600
+    val_seed: int = 0
 
 @dataclass
 class LoggingConfig:
@@ -324,24 +330,34 @@ def load_checkpoint(path, model, optimizer):
 # ── Evaluation ────────────────────────────────────────────────────────────────
 
 @torch.no_grad()
-def evaluate(model, val_loader, device, n_steps: int, scaler_ctx) -> dict:
+def evaluate(model, val_loader, device, n_steps: Optional[int], scaler_ctx) -> dict:
+    """
+    Token-weighted mean validation loss.
+
+    n_steps=None reads the whole (finite) validation loader: with the fixed
+    validation sample, periodic and final evaluations then use the same
+    windows and are on the same scale. With the legacy stream, n_steps caps
+    the number of batches. The loss is divided by the tokens actually seen.
+    """
     model.eval()
-    total_loss = 0.0
-    criterion = nn.CrossEntropyLoss()
+    total_loss, total_tokens = 0.0, 0
+    criterion = nn.CrossEntropyLoss(reduction="sum", ignore_index=-100)
     for i, batch in enumerate(val_loader):
-        if i >= n_steps:
+        if n_steps is not None and i >= n_steps:
             break
         input_ids = batch["input_ids"].to(device, non_blocking=True)
         labels    = batch["labels"].to(device, non_blocking=True)
         with scaler_ctx:
             logits = model(input_ids)
-            loss = criterion(logits.view(-1, logits.size(-1)), labels.view(-1))
+            loss = criterion(logits.view(-1, logits.size(-1)).float(), labels.view(-1))
         total_loss += loss.item()
+        total_tokens += int((labels != -100).sum())
     model.train()
-    avg_loss = total_loss / max(1, n_steps)
+    avg_loss = total_loss / max(1, total_tokens)
     return {
         "val/loss": avg_loss,
         "val/perplexity": math.exp(min(avg_loss, 20)),
+        "val/eval_tokens": total_tokens,
     }
 
 
@@ -362,8 +378,14 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         prefetch_factor=cfg.data.prefetch_factor,
         pin_memory=cfg.data.pin_memory,
         seed=cfg.training.seed,
+        train_order=cfg.data.train_order,
+        val_windows=cfg.data.val_windows,
+        val_seed=cfg.data.val_seed,
     )
     train_loader, val_loader = loader.get_dataloaders()
+    # Fixed sample: every evaluation reads all of it. Legacy stream: capped.
+    eval_periodic = None if cfg.data.val_windows else cfg.training.eval_steps
+    eval_final = None if cfg.data.val_windows else cfg.training.eval_steps * 4
 
     # Model
     log.info("Building model...")
@@ -494,7 +516,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         # Evaluation
         if global_step % cfg.training.eval_every == 0:
             val_metrics = evaluate(
-                model, val_loader, device, cfg.training.eval_steps, autocast_ctx
+                model, val_loader, device, eval_periodic, autocast_ctx
             )
             log.info(f"  Val loss: {val_metrics['val/loss']:.4f} | "
                      f"ppl: {val_metrics['val/perplexity']:.1f}")
@@ -505,7 +527,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
             save_checkpoint(model, optimizer, global_step, global_step, cfg)
 
     # Final eval + checkpoint
-    val_metrics = evaluate(model, val_loader, device, cfg.training.eval_steps * 4, autocast_ctx)
+    val_metrics = evaluate(model, val_loader, device, eval_final, autocast_ctx)
     wall_hours = (time.perf_counter() - t_start) / 3600
     log.info(f"Final val loss: {val_metrics['val/loss']:.4f} | "
              f"ppl: {val_metrics['val/perplexity']:.1f} | {wall_hours:.2f}h")

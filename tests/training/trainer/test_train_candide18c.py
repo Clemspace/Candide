@@ -6,6 +6,7 @@ available, since the script picks its device itself.
 """
 
 import importlib
+import math
 
 import pytest
 import torch
@@ -138,3 +139,46 @@ def test_train_angpt_keeps_rows_bounded(tmp_path, monkeypatch):
     monkeypatch.setattr(script, "setup_model", capture)
     script.train(cfg)
     assert built["model"].max_weight_row_norm() <= 1.0 + 1e-4
+
+
+# ============================================================================
+# DATA OPTIONS AND EVALUATION
+# ============================================================================
+
+def test_loader_options_reach_shard_loader(tmp_path, monkeypatch):
+    seen = {}
+
+    class _Capture(_FakeShardLoader):
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+            super().__init__(**kwargs)
+
+    monkeypatch.setattr(script, "ShardLoader", _Capture)
+    cfg = _full_cfg("gpt", tmp_path, qk_norm=True)
+    cfg.data.train_order, cfg.data.val_windows, cfg.data.val_seed = "global", 32, 7
+    script.train(cfg)
+    assert seen["train_order"] == "global"
+    assert seen["val_windows"] == 32
+    assert seen["val_seed"] == 7
+
+
+def test_data_defaults_are_global_order_and_fixed_val():
+    d = script.DataConfig()
+    assert d.train_order == "global"
+    assert d.val_windows and d.val_windows > 0
+
+
+def test_evaluate_reads_whole_loader_and_weights_by_tokens():
+    """n_steps=None reads every batch; ignored labels do not count as tokens."""
+
+    class _Const(torch.nn.Module):
+        def forward(self, x):
+            return torch.zeros(*x.shape, VOCAB)      # uniform prediction: loss = log(VOCAB)
+
+    x = torch.randint(0, VOCAB, (5, SEQ))
+    labels = x.clone()
+    labels[0, :] = -100                               # one fully ignored row
+    batches = [{"input_ids": x[i:i + 2], "labels": labels[i:i + 2]} for i in range(0, 5, 2)]
+    out = script.evaluate(_Const(), batches, torch.device("cpu"), None, torch.autocast("cpu", enabled=False))
+    assert out["val/loss"] == pytest.approx(math.log(VOCAB), rel=1e-5)
+    assert out["val/eval_tokens"] == 4 * SEQ

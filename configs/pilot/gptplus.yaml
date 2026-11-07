@@ -37,6 +37,14 @@ training:
   log_every: 10
   seed: 1
 
+data:
+  shards_dir: /data/pretrain_candide/shards
+  sequence_length: 1024
+  num_workers: 2
+  train_order: global       # windows shuffled across all shards (2026-11-07)
+  val_windows: 1600         # fixed validation sample, 1.64M tokens, same for every run
+  val_seed: 0
+
 logging:
   wandb_project: candide-18c
   wandb_run_name: pilot-gptplus
