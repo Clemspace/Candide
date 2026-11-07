@@ -110,6 +110,72 @@ class SwiGLUFeedForward(BaseFeedForward):
             nn.init.zeros_(self.w3.bias)
 
 
+class GeGLUFeedForward(BaseFeedForward):
+    """
+    GeGLU feedforward: w3(GELU(w1 x) * w2 x).
+
+    Same layout as SwiGLUFeedForward with GELU in place of SiLU on the
+    activated branch. Used in ModernBERT (hidden_activation="gelu", exact
+    erf GELU). Weight correspondence with Hugging Face ModernBertMLP:
+    Wi.weight = cat([w1.weight, w2.weight], dim=0) (activated half first,
+    then gate), Wo.weight = w3.weight.
+
+    Reference: Shazeer (2020), GLU Variants Improve Transformer,
+    https://arxiv.org/abs/2002.05202
+
+    Args:
+        d_model: Model dimension
+        d_ff: Hidden dimension of each branch (ModernBERT-base: 1152)
+        dropout: Dropout on the output
+        bias: Bias in the three projections
+        approximate: 'none' (erf GELU, ModernBERT) or 'tanh'
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        d_ff: Optional[int] = None,
+        dropout: float = 0.0,
+        bias: bool = False,
+        approximate: str = 'none',
+        **kwargs
+    ):
+        if d_ff is None:
+            d_ff = int(8 * d_model / 3)
+            d_ff = ((d_ff + 255) // 256) * 256
+
+        super().__init__(d_model=d_model, d_ff=d_ff, dropout=dropout, bias=bias, **kwargs)
+
+        self.approximate = approximate
+        self.w1 = nn.Linear(d_model, d_ff, bias=bias)  # activated branch
+        self.w2 = nn.Linear(d_model, d_ff, bias=bias)  # gate (linear) branch
+        self.w3 = nn.Linear(d_ff, d_model, bias=bias)  # down projection
+        self.dropout_layer = nn.Dropout(dropout) if dropout > 0 else None
+
+        self.reset_parameters()
+
+    def forward(self, x: Tensor) -> Tensor:
+        hidden = F.gelu(self.w1(x), approximate=self.approximate) * self.w2(x)
+        if self.pruning_mask.numel() > 1:
+            hidden = hidden * self.pruning_mask
+        output = self.w3(hidden)
+        if self.dropout_layer is not None:
+            output = self.dropout_layer(output)
+        return output
+
+    def reset_parameters(self) -> None:
+        nn.init.normal_(self.w1.weight, mean=0, std=self.d_model ** -0.5)
+        nn.init.normal_(self.w2.weight, mean=0, std=self.d_model ** -0.5)
+        nn.init.normal_(self.w3.weight, mean=0, std=self.d_ff ** -0.5)
+        if self.use_bias:
+            nn.init.zeros_(self.w1.bias)
+            nn.init.zeros_(self.w2.bias)
+            nn.init.zeros_(self.w3.bias)
+
+    def extra_repr(self) -> str:
+        return f'd_model={self.d_model}, d_ff={self.d_ff}, approximate={self.approximate}'
+
+
 class GELUFeedForward(BaseFeedForward):
     """
     Standard GELU Feedforward Network.
@@ -242,6 +308,16 @@ def get_feedforward(
             **kwargs
         )
     
+    elif ffn_type == 'geglu' or ffn_type == 'geglu_tanh':
+        return GeGLUFeedForward(
+            d_model=d_model,
+            d_ff=d_ff,
+            dropout=dropout,
+            bias=bias,
+            approximate='tanh' if ffn_type == 'geglu_tanh' else 'none',
+            **kwargs
+        )
+
     elif ffn_type == 'gelu':
         return GELUFeedForward(
             d_model=d_model,
@@ -275,5 +351,5 @@ def get_feedforward(
     else:
         raise ValueError(
             f"Unknown ffn_type: {ffn_type}. "
-            f"Available: 'swiglu', 'gelu', 'gelu_new', 'relu'"
+            f"Available: 'swiglu', 'geglu', 'geglu_tanh', 'gelu', 'gelu_new', 'relu'"
         )

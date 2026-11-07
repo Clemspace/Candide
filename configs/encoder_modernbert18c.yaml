@@ -1,0 +1,86 @@
+# encoder_modernbert18c.yaml — CandideEncoder with the ModernBERT-base architecture
+#
+# Architecture = ModernBERT-base (answerdotai/ModernBERT-base config.json) except
+# the vocabulary (our 32k BPE) and the context (1024, ModernBERT's first-phase
+# length). Every model key below has its ModernBERT counterpart in the comment,
+# so the checkpoint converts to ModernBertForMaskedLM (q/k rows need the
+# permutation from our interleaved RoPE to HF's half-split RoPE; conversion
+# script to be written before the release).
+#
+# Run (repository root):
+#   PYTHONPATH=. python ramanujan/training/train_encoder18c.py \
+#       --config configs/encoder_modernbert18c.yaml --wandb
+#   Smoke test first: add --max-steps 30
+#
+# NOT TUNED: learning_rate is a starting point, not a measured optimum. Before
+# the long run, give it the same short LR sweep as the decoder pilot
+# (e.g. 2.5e-4 / 5e-4 / 1e-3 with --lr, --max-steps, --group).
+
+model:
+  vocab_size: 32133            # vocab_size (ours)
+  mask_token_id: 32132         # checked against the tokenizer at startup
+  d_model: 768                 # hidden_size
+  n_layers: 22                 # num_hidden_layers
+  n_heads: 12                  # num_attention_heads
+  n_kv_heads: null             # full multi-head attention
+  attention_type: mha
+  d_ff: 1152                   # intermediate_size (per GeGLU branch)
+  ffn_type: geglu              # hidden_activation: gelu (exact erf)
+  max_seq_len: 1024
+  dropout: 0.0                 # attention/mlp/embedding dropout: 0.0
+  norm_first: true
+  norm_type: layer             # LayerNorm
+  norm_eps: 1.0e-5             # norm_eps
+  norm_bias: false             # norm_bias
+  embedding_norm: true         # embeddings.norm; layer 0 has no attention pre-norm
+  bias: false                  # attention_bias, mlp_bias
+  use_rope: true
+  global_attn_every_n_layers: 3   # layers 0, 3, 6, ... global
+  local_attention: 128            # total window: |i - j| <= 64
+  rope_theta: 160000.0            # global_rope_theta
+  local_rope_theta: 10000.0       # local_rope_theta
+  head_bias: false             # classifier_bias (head dense)
+  decoder_bias: true           # decoder_bias; decoder tied to embeddings
+  add_pooler: false            # MLM pretraining does not train a CLS pooler
+  init_scheme: megatron        # truncated normal 0.02, residual outputs / sqrt(2L)
+
+training:
+  max_steps: 15000             # x 65,536 tokens = 0.98B tokens (~0.56 epoch of 1.748B)
+  batch_size: 8
+  gradient_accumulation_steps: 8   # 64 x 1024 = 65,536 tokens/step, as the decoder
+  learning_rate: 5.0e-4        # NOT TUNED, see header
+  min_lr: 5.0e-5
+  weight_decay: 0.01
+  grad_clip: 1.0
+  warmup_steps: 750            # 5% of steps
+  mixed_precision: bf16
+  eval_every: 500
+  eval_steps: null             # whole fixed validation sample
+  save_every: 2500
+  log_every: 10
+  seed: 1
+  mlm_probability: 0.30        # ModernBERT masking rate
+  masking_strategy: token
+  sparse_prediction: true      # MLM head on masked positions only
+  val_mask_seed: 0
+
+data:
+  shards_dir: /data/pretrain_candide/shards
+  tokenizer_path: /data/pretrain_candide/tokenizer/tokenizer.json
+  sequence_length: 1024
+  num_workers: 2
+  prefetch_factor: 4
+  pin_memory: true
+  train_order: global
+  val_windows: 1600            # same fixed sample definition as the decoder pilot
+  val_seed: 0
+  pad_token_id: 1
+  never_mask_tokens: ["<|bos|>", "<|eos|>"]
+
+logging:
+  use_wandb: false             # --wandb
+  wandb_project: candide-18c
+  wandb_run_name: candide18c-encoder-modernbert
+  wandb_group: encoder-modernbert
+  wandb_tags: [candide, 18c-french, encoder, mlm, modernbert-arch]
+  output_dir: /data/pretrain_candide/runs/candide18c_encoder_modernbert
