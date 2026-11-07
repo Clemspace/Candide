@@ -10,6 +10,37 @@ from .base import BaseAttention
 from .normalization import RMSNorm
 
 
+def _sdpa_mask(mask: Optional[Tensor]) -> Optional[Tensor]:
+    """
+    Convert a Candide attention mask (nonzero / True = attend) to the boolean
+    mask expected by F.scaled_dot_product_attention (True = attend),
+    broadcastable to (batch, heads, q_len, kv_len).
+    """
+    if mask is None:
+        return None
+    if mask.dim() == 3:
+        mask = mask.unsqueeze(1)
+    if mask.dtype != torch.bool:
+        mask = mask != 0
+    return mask
+
+
+def _attend(module: nn.Module, q: Tensor, k: Tensor, v: Tensor, mask: Optional[Tensor]) -> Tensor:
+    """
+    softmax(q k^T * scale + mask) v via PyTorch's fused SDPA kernel.
+
+    Numerically equivalent to the explicit path it replaces (scores,
+    masked_fill(-inf), softmax, dropout, matmul); same kernel as ANGPTAttention,
+    so the two arms of the normalization pilot compare like for like.
+    """
+    return F.scaled_dot_product_attention(
+        q, k, v,
+        attn_mask=_sdpa_mask(mask),
+        dropout_p=module.dropout if module.training else 0.0,
+        scale=module.scale,
+    )
+
+
 class MultiHeadAttention(BaseAttention):
     """
     Multi-Head Attention (MHA).
@@ -152,29 +183,8 @@ class MultiHeadAttention(BaseAttention):
         # Cache for next iteration
         past_key_value = (k, v) if use_cache else None
         
-        # Compute attention scores
-        # (batch, n_heads, seq_len, head_dim) @ (batch, n_heads, head_dim, kv_seq_len)
-        # = (batch, n_heads, seq_len, kv_seq_len)
-        scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
-        
-        # Apply attention mask
-        if mask is not None:
-            # Expand mask if needed: (batch, seq_len, seq_len) -> (batch, 1, seq_len, seq_len)
-            if mask.dim() == 3:
-                mask = mask.unsqueeze(1)
-            scores = scores.masked_fill(mask == 0, float('-inf'))
-        
-        # Softmax
-        attn_weights = F.softmax(scores, dim=-1)
-        
-        # Dropout on attention weights
-        if self.attn_dropout is not None:
-            attn_weights = self.attn_dropout(attn_weights)
-        
-        # Apply attention to values
-        # (batch, n_heads, seq_len, kv_seq_len) @ (batch, n_heads, kv_seq_len, head_dim)
-        # = (batch, n_heads, seq_len, head_dim)
-        output = torch.matmul(attn_weights, v)
+        # Attention (fused SDPA kernel; dropout on attention weights inside)
+        output = _attend(self, q, k, v, mask)
         
         # Reshape back to (batch, seq_len, d_model)
         output = output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
@@ -382,24 +392,8 @@ class GroupedQueryAttention(BaseAttention):
         k = self._repeat_kv(k)
         v = self._repeat_kv(v)
         
-        # Compute attention scores
-        scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
-        
-        # Apply attention mask
-        if mask is not None:
-            if mask.dim() == 3:
-                mask = mask.unsqueeze(1)
-            scores = scores.masked_fill(mask == 0, float('-inf'))
-        
-        # Softmax
-        attn_weights = F.softmax(scores, dim=-1)
-        
-        # Dropout on attention weights
-        if self.attn_dropout is not None:
-            attn_weights = self.attn_dropout(attn_weights)
-        
-        # Apply attention to values
-        output = torch.matmul(attn_weights, v)
+        # Attention (fused SDPA kernel; dropout on attention weights inside)
+        output = _attend(self, q, k, v, mask)
         
         # Reshape back
         output = output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
