@@ -1,0 +1,105 @@
+# candide18c_encoder.yaml — MLM pretraining config for CandideEncoder
+# Architecture: ~110M params, bidirectional, RoPE + GQA + SwiGLU + RMSNorm
+# Objective: Masked Language Modeling (15% token masking, BERT-style 80/10/10)
+# Corpus: ModERN 18c French, same shards as decoder run
+# Target: Beat D'AlemBERT on FreEM_LPM POS tagging (F1 baseline: ~0.93)
+#
+# Comparison to decoder (candide18c.yaml):
+#   decoder: 8L × 768d, causal LM, max_steps=20000, seq=1024, eff_batch=64
+#   encoder: 12L × 768d, MLM,      max_steps=20000, seq=512,  eff_batch=64
+#
+# Estimated training time: ~10-14h on single A40 (MLM is ~1.5x slower per step
+# than causal LM due to on-the-fly masking, but shorter sequences help)
+
+model:
+  vocab_size: 32133          # Same 32k BPE tokenizer as decoder
+  d_model: 768
+  n_layers: 12               # 12 layers (vs 8 for decoder) — encoder benefits
+                             # from depth for bidirectional representation
+  n_heads: 12
+  n_kv_heads: 4              # GQA — same as decoder, less relevant for encoder
+                             # (no KV cache at inference) but keeps arch consistent
+  d_ff: 3072                 # 4 × d_model
+  max_seq_len: 512           # Encoders use shorter sequences; 512 is BERT standard
+                             # Historical sentences rarely exceed 200 tokens anyway
+  dropout: 0.1
+  norm_first: true
+  norm_type: rms
+  attention_type: alternating
+  ffn_type: swiglu
+  use_rope: true
+  rope_theta: 10000.0
+  bias: false
+  # Encoder-specific
+  local_window_size: 256
+  mask_token_id: 32132           # ← CHECK: verify [MASK] token ID in your BPE vocab
+                             #   run: tokenizer.token_to_id("[MASK]")
+  add_pooler: true           # CLS pooler for downstream classification
+  classifier_dropout: 0.1
+
+training:
+  max_steps: 80000          # ~655M tokens at eff_batch=64, seq=512
+                             # Less than decoder's 1.3B — encoder converges faster
+  batch_size: 16             # 2x decoder batch (shorter sequences, no KV cache)
+  gradient_accumulation_steps: 4   # eff_batch = 16 × 4 = 64 (same as decoder)
+  learning_rate: 2.0e-4      # Lower than decoder (3e-4) — BERT-style encoders
+                             # are sensitive to LR; 1e-4 is safe starting point
+  weight_decay: 0.01
+  grad_clip: 1.0
+  warmup_steps: 6000         # 10% of total steps
+  min_lr: 2.0e-5             # 10× decay
+  mixed_precision: bf16
+  eval_every: 500
+  eval_steps: 50
+  save_every: 5000
+  log_every: 10
+  seed: 42
+  # MLM masking
+  mlm_probability: 0.15      # Mask 15% of tokens (BERT standard)
+  masking_strategy: span    # "token" (BERT) or "span" (RoBERTa-style)
+                             # Start with "token" — switch to "span" in v2 if needed
+  mean_span_length: 3        # Only used if masking_strategy: span
+
+data:
+  shards_dir: /data/pretrain_candide/shards   # Same shards as decoder
+  tokenizer_path: /data/pretrain_candide/tokenizer/tokenizer.json
+  sequence_length: 512       # Shorter than decoder (1024) — matches max_seq_len
+  num_workers: 2
+  prefetch_factor: 4
+  pin_memory: true
+
+logging:
+  use_wandb: false           # enable with --wandb flag
+  wandb_project: candide-18c
+  wandb_entity: null
+  wandb_run_name: candide18c-encoder-mlm-v1
+  wandb_tags:
+    - candide
+    - 18c-french
+    - encoder
+    - mlm
+    - modernbert-style
+    - dalembert-comparison
+  output_dir: /data/pretrain_candide/runs/candide18c_encoder
+
+# ── Notes ──────────────────────────────────────────────────────────────────────
+# Token budget: 20k steps × 64 eff_batch × 512 seq = 655M tokens
+# But only 15% are masked → model sees signal on ~98M positions
+# Compare D'AlemBERT: trained on ~180M token FreEMmax (much smaller corpus)
+#
+# BEFORE RUNNING — verify mask_token_id:
+#   python -c "
+#   from tokenizers import Tokenizer
+#   t = Tokenizer.from_file('/data/pretrain_candide/tokenizer/tokenizer.json')
+#   print(t.token_to_id('[MASK]'))
+#   "
+#   If [MASK] doesn't exist, add it:
+#   t.add_special_tokens(['[MASK]'])
+#
+# Trial run (verify pipeline before committing GPU hours):
+#   python train_encoder18c.py --config candide18c_encoder.yaml --trial
+#
+# Evaluation targets:
+#   - Val MLM loss: target < 2.5 (D'AlemBERT equivalent not published, estimate)
+#   - Masked token accuracy: target > 60% at convergence
+#   - POS tagging FreEM_LPM: target F1 > D'AlemBERT (~0.93)
