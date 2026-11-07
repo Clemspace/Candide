@@ -163,9 +163,9 @@ checkpoint_*.pt
 
 # Training outputs
 outputs/
-runs/
+/runs/
 logs/
-wandb/
+/wandb/
 mlruns/
 lightning_logs/
 
@@ -189,7 +189,7 @@ cache/
 # ============================================================================
 # Weights & Biases
 # ============================================================================
-wandb/
+/wandb/
 *.wandb
 
 
@@ -379,9 +379,9 @@ rama8.py
 candide_base.py
 install_cuda.sh
 # data and run outputs
-data/
-pretrained_models/
-runs/
-wandb/
-wandb_export/
+/data/
+/pretrained_models/
+/runs/
+/wandb/
+/wandb_export/
 /*.png
