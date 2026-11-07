@@ -378,3 +378,10 @@ credentials.json
 rama8.py
 candide_base.py
 install_cuda.sh
+# data and run outputs
+data/
+pretrained_models/
+runs/
+wandb/
+wandb_export/
+/*.png
