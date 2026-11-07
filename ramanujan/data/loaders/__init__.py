@@ -15,6 +15,7 @@ from .factory import (
     create_dataloader,
     create_dataloader_from_config,
 )
+from .mlm_collator import MLMCollator
 
 __all__ = [
     # Collation
@@ -24,6 +25,7 @@ __all__ = [
     'causal_lm_collate',
     'sequence_classification_collate',
     'get_collate_fn',
+    'MLMCollator',
     
     # Factory
     'WikiTextLoader',
@@ -31,3 +33,10 @@ __all__ = [
     'create_dataloader',
     'create_dataloader_from_config',
 ]
+
+from .shard_loader import (
+    ShardedDataset,
+    ShardLoader,
+    load_shard,
+    read_shard_header,
+)
