@@ -109,8 +109,8 @@ class OptimizerSpec:
     nesterov: bool = False
     
     # Muon specific
-    ns_steps: int = 5
-    backend: str = 'newtonschulz5'
+    ns_steps: int = 5                # Newton-Schulz iterations per step
+    backend: str = 'newtonschulz5'   # ignored (kept so old configs still load)
     
     # AdEMAMix specific
     beta1: float = 0.9
@@ -129,8 +129,8 @@ class OptimizerSpec:
     grad_clip_value: float = 1.0
     
     # Advanced features
-    foreach: bool = True  # Faster multi-tensor operations
-    fused: bool = False   # Fused kernel (if available)
+    foreach: Optional[bool] = None  # None: PyTorch picks (multi-tensor when possible)
+    fused: Optional[bool] = None    # None: fused CUDA AdamW kernel when all params are on CUDA
     
     # Additional kwargs
     config: Dict[str, Any] = None

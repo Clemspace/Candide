@@ -104,20 +104,25 @@ def create_optimizer(
             betas=kwargs.get('betas', (0.9, 0.999)),
             eps=kwargs.get('eps', 1e-8),
             amsgrad=kwargs.get('amsgrad', False),
-            foreach=kwargs.get('foreach', True),
-            fused=kwargs.get('fused', False)
+            foreach=kwargs.get('foreach', None),
+            fused=kwargs.get('fused', None)   # None: fused CUDA kernel when possible
         )
     
     elif name_lower == 'muon':
+        # Muon for hidden matrices, AdamW for the rest: pass
+        # muon_param_groups(model) as params to keep embeddings / lm_head on AdamW.
         optimizer = optimizer_class(
             params,
             lr=lr if lr != 1e-3 else 0.02,  # Default to 0.02 for Muon
             momentum=kwargs.get('momentum', 0.95),
+            nesterov=kwargs.get('nesterov', True),
             weight_decay=weight_decay,
-            ns_steps=kwargs.get('ns_steps', 5),
-            dampening=kwargs.get('dampening', 0.0),
-            backend=kwargs.get('backend', 'newtonschulz5'),
-            foreach=kwargs.get('foreach', True)
+            ns_steps=kwargs.get('ns_steps', 5),          # Newton-Schulz iterations
+            adjust_lr=kwargs.get('adjust_lr', 'spectral'),
+            adamw_lr_ratio=kwargs.get('adamw_lr_ratio', None),
+            adamw_betas=kwargs.get('adamw_betas', (0.9, 0.95)),
+            adamw_eps=kwargs.get('adamw_eps', 1e-8),
+            adamw_weight_decay=kwargs.get('adamw_weight_decay', 0.0),
         )
     
     elif name_lower in ['ademamix', 'adema_mix']:
@@ -130,7 +135,8 @@ def create_optimizer(
             alpha=kwargs.get('alpha', 5.0),
             eps=kwargs.get('eps', 1e-8),
             weight_decay=weight_decay,
-            foreach=kwargs.get('foreach', True)
+            alpha_warmup=kwargs.get('alpha_warmup', None),
+            beta3_warmup=kwargs.get('beta3_warmup', None),
         )
     
     elif name_lower == 'sgd':
@@ -141,7 +147,7 @@ def create_optimizer(
             weight_decay=weight_decay,
             dampening=kwargs.get('dampening', 0.0),
             nesterov=kwargs.get('nesterov', False),
-            foreach=kwargs.get('foreach', True)
+            foreach=kwargs.get('foreach', None)
         )
     
     elif name_lower == 'lion':
@@ -150,7 +156,6 @@ def create_optimizer(
             lr=lr if lr != 1e-3 else 1e-4,  # Default to 1e-4 for Lion
             betas=kwargs.get('betas', (0.9, 0.99)),
             weight_decay=weight_decay,
-            foreach=kwargs.get('foreach', True)
         )
     
     # Wrap optimizer with component interface
