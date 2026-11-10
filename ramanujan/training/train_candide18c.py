@@ -110,6 +110,16 @@ class TrainingConfig:
     # and final.pt are never deleted.
     keep_last: Optional[int] = None
     keep_steps: list = field(default_factory=list)
+    # Optimizer: "adamw" (the pilots) or "muon" (hidden matrices; embeddings, head
+    # and 1-D parameters stay on AdamW inside the same optimizer). With
+    # muon_adjust_lr "match_rms" the Muon update has the RMS of an AdamW update,
+    # so learning_rate and weight_decay are on the AdamW scale (Moonshot, 2025).
+    optimizer: str = "adamw"
+    muon_momentum: float = 0.95
+    muon_ns_steps: int = 5
+    muon_adjust_lr: str = "match_rms"
+    # Throughput: torch.compile the model (checkpoints always hold plain weights)
+    compile: bool = False
 
 @dataclass
 class DataConfig:
@@ -266,7 +276,38 @@ def setup_angpt(cfg: ModelConfig) -> nn.Module:
 
 # ── Optimizer / Scheduler ─────────────────────────────────────────────────────
 
+def setup_muon(model: nn.Module, cfg: TrainingConfig):
+    """
+    Muon for attention and FFN matrices; AdamW (inside MuonOptimizer) for the
+    embedding / tied head (decayed, as in the AdamW baseline) and for 1-D
+    parameters (not decayed).
+    """
+    from ramanujan.training.optimizers.muon import MuonOptimizer, muon_param_groups
+    groups = muon_param_groups(model)
+    muon = [g for g in groups if g["use_muon"]]
+    adam = [p for g in groups if not g["use_muon"] for p in g["params"]]
+    matrices = [p for p in adam if p.ndim >= 2]
+    vectors = [p for p in adam if p.ndim < 2]
+    if matrices:
+        muon.append({"params": matrices, "use_muon": False, "adamw_weight_decay": cfg.weight_decay})
+    if vectors:
+        muon.append({"params": vectors, "use_muon": False, "adamw_weight_decay": 0.0})
+    n_muon = sum(p.numel() for g in muon if g["use_muon"] for p in g["params"])
+    n_all = sum(p.numel() for g in muon for p in g["params"])
+    log.info(f"Muon: {n_muon/1e6:.1f}M params on Muon, {(n_all - n_muon)/1e6:.1f}M on AdamW "
+             f"(adjust_lr={cfg.muon_adjust_lr})")
+    return MuonOptimizer(muon, lr=cfg.learning_rate, momentum=cfg.muon_momentum,
+                         ns_steps=cfg.muon_ns_steps, weight_decay=cfg.weight_decay,
+                         adjust_lr=cfg.muon_adjust_lr, adamw_betas=(0.9, 0.95), adamw_eps=1e-8)
+
+
 def setup_optimizer(model: nn.Module, cfg: TrainingConfig, arch: str = "gpt"):
+    if getattr(cfg, "optimizer", "adamw") == "muon":
+        if arch != "gpt":
+            raise ValueError("optimizer=muon is wired for arch=gpt only")
+        return setup_muon(model, cfg)
+    if getattr(cfg, "optimizer", "adamw") != "adamw":
+        raise ValueError(f"Unknown optimizer: {cfg.optimizer}. Available: 'adamw', 'muon'")
     if arch == "angpt":
         # anGPT: no weight decay on anything (rows are bounded by projection;
         # decay would shrink alpha / s_z / attention temperature). Same AdamW
@@ -519,6 +560,9 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
     torch.manual_seed(cfg.training.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f"Device: {device}")
+    # fp32 matmuls outside autocast (if any) on tensor cores
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     accum = cfg.training.gradient_accumulation_steps
     cooldown_start = cooldown_start_step(cfg.training)
@@ -577,6 +621,12 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
     if projects:
         model.project_parameters()   # weight rows into the unit ball before step 0
 
+    # torch.compile: `model` runs compiled; `raw_model` is what is saved and projected
+    raw_model = model
+    if cfg.training.compile:
+        log.info("torch.compile(model)")
+        model = torch.compile(raw_model)
+
     start_step = global_step
 
     # Data
@@ -604,7 +654,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         return metrics
 
     # WandB
-    wandb_run = setup_wandb(cfg, model, run_id=ckpt.get("wandb_id"))
+    wandb_run = setup_wandb(cfg, raw_model, run_id=ckpt.get("wandb_id"))
 
     def checkpoint(tag=""):
         extra = {"scaler": scaler.state_dict(), "rng_after_init": True, **rng_state(),
@@ -612,7 +662,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
                  "cooldown_start": cooldown_start}
         if wandb_run is not None and getattr(wandb_run, "run", None) is not None:
             extra["wandb_id"] = wandb_run.run.id
-        return save_checkpoint(model, optimizer, global_step, global_step, cfg, tag=tag, extra=extra)
+        return save_checkpoint(raw_model, optimizer, global_step, global_step, cfg, tag=tag, extra=extra)
 
     criterion = nn.CrossEntropyLoss()
     eff_batch  = cfg.training.batch_size * cfg.training.gradient_accumulation_steps
@@ -654,8 +704,8 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         for pg in optimizer.param_groups:
             pg["lr"] = lr
 
-        # Gradient accumulation
-        step_loss = 0.0
+        # Gradient accumulation (loss summed on the device: no host sync per micro-batch)
+        step_loss = torch.zeros((), device=device)
         for micro in range(cfg.training.gradient_accumulation_steps):
             try:
                 batch = next(train_iter)
@@ -672,7 +722,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
                 loss = loss / cfg.training.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
-            step_loss += loss.item()
+            step_loss += loss.detach().float()
 
         # Gradient clip + optimizer step
         scaler.unscale_(optimizer)
@@ -686,8 +736,8 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         max_row_norm = None
         if projects:
             if (global_step + 1) % cfg.training.log_every == 0:
-                max_row_norm = model.max_weight_row_norm()   # before projection
-            model.project_parameters()
+                max_row_norm = raw_model.max_weight_row_norm()   # before projection
+            raw_model.project_parameters()
 
         global_step += 1
         running_loss += step_loss
@@ -698,7 +748,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
             elapsed = t1 - t0
             tps = tokens_per_step * cfg.training.log_every / elapsed
 
-            avg_loss = running_loss / cfg.training.log_every
+            avg_loss = float(running_loss) / cfg.training.log_every
             ppl = math.exp(min(avg_loss, 20))
 
             log.info(
@@ -781,6 +831,10 @@ def main():
     parser.add_argument("--schedule", choices=["cosine", "wsd"], default=None)
     parser.add_argument("--cooldown-start", type=int, default=None,
                         help="WSD: first cooldown step (branch a cooldown off a stable checkpoint)")
+    parser.add_argument("--optimizer", choices=["adamw", "muon"], default=None)
+    parser.add_argument("--compile", action="store_true", help="torch.compile the model")
+    parser.add_argument("--micro-batch", type=int, default=None,
+                        help="per-step micro-batch; gradient accumulation is rescaled to keep tokens/step")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -806,6 +860,16 @@ def main():
         cfg.training.schedule = args.schedule
     if args.cooldown_start is not None:
         cfg.training.cooldown_start = args.cooldown_start
+    if args.optimizer is not None:
+        cfg.training.optimizer = args.optimizer
+    if args.compile:
+        cfg.training.compile = True
+    if args.micro_batch is not None:
+        total = cfg.training.batch_size * cfg.training.gradient_accumulation_steps
+        if total % args.micro_batch:
+            parser.error(f"--micro-batch {args.micro_batch} does not divide {total} sequences per step")
+        cfg.training.batch_size = args.micro_batch
+        cfg.training.gradient_accumulation_steps = total // args.micro_batch
 
     if args.wandb:
         cfg.logging.use_wandb = True

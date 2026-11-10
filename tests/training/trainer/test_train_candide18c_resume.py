@@ -146,6 +146,58 @@ def test_retention_during_training(tmp_path):
     assert names == ["final.pt", "step_2.pt", "step_5.pt", "step_6.pt"]
 
 
+def test_muon_groups_cover_every_parameter_once():
+    cfg = script.FullConfig()
+    model = script.setup_model(script.ModelConfig(vocab_size=VOCAB, d_model=64, n_layers=2, n_heads=4,
+                                                  n_kv_heads=2, d_ff=128, max_seq_len=SEQ, dropout=0.0,
+                                                  arch="gpt", qk_norm=True, tie_word_embeddings=True))
+    opt = script.setup_optimizer(model, script.TrainingConfig(optimizer="muon", weight_decay=0.1,
+                                                              learning_rate=1e-3))
+    from ramanujan.training.optimizers.muon import MuonOptimizer
+    assert isinstance(opt, MuonOptimizer)
+    ids = [id(p) for g in opt.param_groups for p in g["params"]]
+    assert len(ids) == len(set(ids)) == len({id(p) for p in model.parameters()})
+    emb = model.token_embedding.embedding.weight
+    for g in opt.param_groups:
+        ps = {id(p) for p in g["params"]}
+        if g["use_muon"]:
+            assert id(emb) not in ps and all(p.ndim == 2 for p in g["params"])
+            assert g["weight_decay"] == 0.1
+        elif id(emb) in ps:
+            assert g["adamw_weight_decay"] == 0.1                # embedding decayed, as with AdamW
+        else:
+            assert all(p.ndim < 2 for p in g["params"]) and g["adamw_weight_decay"] == 0.0
+
+
+def test_unknown_optimizer():
+    model = script.setup_model(script.ModelConfig(vocab_size=VOCAB, d_model=64, n_layers=1, n_heads=4,
+                                                  n_kv_heads=2, d_ff=128, max_seq_len=SEQ))
+    with pytest.raises(ValueError, match="Unknown optimizer"):
+        script.setup_optimizer(model, script.TrainingConfig(optimizer="sgd"))
+
+
+def test_muon_resume_matches_uninterrupted_run(tmp_path):
+    _shards(tmp_path / "main", 0)
+    full = _cfg(tmp_path, "full", schedule="wsd")
+    full.training.optimizer = "muon"
+    script.train(full)
+    half = _cfg(tmp_path, "resumed", schedule="wsd")
+    half.training.optimizer = "muon"
+    script.train(half, resume=str(tmp_path / "full" / "checkpoints" / "step_3.pt"))
+    _assert_same(_weights(tmp_path / "full" / "checkpoints" / "final.pt"),
+                 _weights(tmp_path / "resumed" / "checkpoints" / "final.pt"))
+
+
+@pytest.mark.skipif(not CUDA, reason="torch.compile run on GPU only")
+def test_compiled_run_saves_plain_weights(tmp_path):
+    _shards(tmp_path / "main", 0)
+    cfg = _cfg(tmp_path, "c", max_steps=3)
+    cfg.training.compile = True
+    script.train(cfg)
+    keys = _weights(tmp_path / "c" / "checkpoints" / "final.pt").keys()
+    assert not any(k.startswith("_orig_mod.") for k in keys)
+
+
 def test_config_errors(tmp_path):
     _shards(tmp_path / "main", 0)
     cfg = _cfg(tmp_path, "x", mix={"main": 1.0}, cooldown_mix={"main": 0.5, "enc": 0.5})
