@@ -108,6 +108,13 @@ def sample_files(rows, split: str, noisy_subcorpora, noisy_share: float, sample_
     return picked
 
 
+def budgets_not_met(clean_chars: int, noisy_chars: int, noisy_share: float, sample_chars: float) -> list:
+    """Names of the character budgets ('clean', 'noisy') the sampled files fall short of."""
+    return [name for name, got, want in
+            (("clean", clean_chars, (1 - noisy_share) * sample_chars),
+             ("noisy", noisy_chars, noisy_share * sample_chars)) if got < want]
+
+
 def iter_texts(rows, chunk_chars: int = 1_000_000):
     """Cleaned file texts (same cleaning as prepare_shards), in chunks."""
     for r in rows:
@@ -125,6 +132,12 @@ def train(args):
     total = sum(int(r["n_chars"]) for r in picked)
     print(f"{len(picked):,} files, {total/1e6:.0f}M chars, noisy share {noisy_chars/max(1, total):.3f}",
           flush=True)
+    # A budget larger than the available text is filled with all of it, and the
+    # share then follows what exists, not the target: say so.
+    short = budgets_not_met(total - noisy_chars, noisy_chars, args.noisy_share, args.sample_chars)
+    if short:
+        print(f"WARNING: {' and '.join(short)} budget not met (not enough training text); "
+              f"the noisy share is {noisy_chars/max(1, total):.3f}, target {args.noisy_share}", flush=True)
     specials = special_tokens(args.old_tokenizer)
     tok = build_tokenizer()
     trainer = trainers.BpeTrainer(vocab_size=args.vocab_size, min_frequency=args.min_frequency,
@@ -137,7 +150,8 @@ def train(args):
     tok.save(str(out))
     meta = {"manifest": args.manifest, "noisy_subcorpora": args.noisy_subcorpora,
             "noisy_share_target": args.noisy_share, "noisy_share_actual": noisy_chars / max(1, total),
-            "train_chars": total, "files": len(picked), "vocab_size": tok.get_vocab_size(),
+            "train_chars": total, "files": len(picked), "budgets_not_met": short,
+            "vocab_size": tok.get_vocab_size(),
             "specials": {s: tok.token_to_id(s) for s in specials}, "seed": args.seed,
             "split_pattern": SPLIT_PATTERN}
     out.with_suffix(".meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))

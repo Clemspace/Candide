@@ -53,12 +53,20 @@ def test_sample_files_respects_noisy_share(manifest):
     assert all(r["subcorpus"] != "modern_archive" for r in none)
 
 
+def test_budgets_not_met():
+    assert TT.budgets_not_met(900, 100, 0.1, 1000) == []
+    assert TT.budgets_not_met(500, 100, 0.1, 1000) == ["clean"]
+    assert TT.budgets_not_met(50_000, 26_000, 0.1, 1e6) == ["clean", "noisy"]
+
+
 def test_train_roundtrip_specials_and_elision(manifest, tmp_path, monkeypatch):
     pytest.importorskip("tokenizers")
     out = tmp_path / "tok" / "tokenizer.json"
+    # budget small enough for the fixture's 8 + 8 training files: 5 clean files and 1 noisy
+    # file meet it, so the share is set by the budget (~0.1), not by what the fixture holds
     monkeypatch.setattr(sys, "argv", ["tt", "train", "--manifest", str(manifest), "--out", str(out),
                                       "--vocab-size", "400", "--noisy-share", "0.1",
-                                      "--sample-chars", "1e6", "--min-frequency", "1"])
+                                      "--sample-chars", str(5 * len(CLEAN)), "--min-frequency", "1"])
     TT.main()
     from tokenizers import Tokenizer
     tok = Tokenizer.from_file(str(out))
@@ -71,6 +79,7 @@ def test_train_roundtrip_specials_and_elision(manifest, tmp_path, monkeypatch):
     assert pieces[0] == " l'"                                  # elision kept as one pre-token
     meta = json.loads(out.with_suffix(".meta.json").read_text())
     assert meta["vocab_size"] <= 400 and 0 < meta["noisy_share_actual"] < 0.2
+    assert meta["budgets_not_met"] == []
 
 
 def test_old_tokenizer_specials_keep_their_ids(tmp_path):
