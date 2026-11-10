@@ -36,7 +36,8 @@ released by ERC ModERN.
   undated files kept. Exclusion = language != fr, or language score < 0.6, or year > 1800:
   19,614 files listed, 15,319 of them among the selected files. Post-1800 was ~1% of
   the corpus (posthumous / 19th-c. / modern editions). Latin: deferred to v3.
-- Evidence: `/data/pretrain_candide/inventory_v2/inventory_summary.json`, `exclude_v2g.txt` **[no file in repo]**.
+- Evidence: `results/2026-11-10/data/inventory_summary.json`, `results/2026-11-10/data/exclude_v2g.count`
+  (count only; the list `exclude_v2g.txt` and the command that builds it from `inventory.csv` **[no file in repo]**).
 
 ### 1.3 Deduplication v2g — 2026-11-10
 - `scripts/dedup_corpus.py`: content-defined sampling of 200-byte windows (rolling hash,
@@ -44,7 +45,7 @@ released by ERC ModERN.
   files (priority: canon, press, dicos, pamphlets, lettres, archive, merged last);
   internal repetition >= 0.3 drops a file; a correction pass restores files whose only
   source was dropped. Clean validation per sub-corpus: shared <= 2%, 0.5% of kept chars.
-- Result (`dedup_v2g/dedup_summary.json` **[no file in repo]**):
+- Result (`results/2026-11-10/data/dedup_v2g_summary.json`):
 
 | subcorpus | files | chars (M) | kept | near-dup | val files |
 |---|---|---|---|---|---|
@@ -70,7 +71,8 @@ released by ERC ModERN.
   [MASK] 132). Trained on 18,237 files / 2,003M chars with a 10% share of OCR-noisy text
   (`modern_archive`), following P.-C. Langlais's 90/10 suggestion. Noisy shares 0 / 0.1 /
   0.3 gave indistinguishable evaluation: the language filter had already removed most
-  noisy files. Evidence: `tokenizer_v2g/tokenizer.meta.json`, tokenizer eval JSON **[no file in repo]**.
+  noisy files. Evidence: `results/2026-11-10/data/tokenizer_v2g.meta.json`;
+  tokenizer eval JSON **[no file in repo]**.
 - Script and tests: `scripts/train_tokenizer.py`, `tests/scripts/test_train_tokenizer.py`.
 
 ### 1.5 Shards v2g — 2026-11-10
@@ -90,7 +92,7 @@ released by ERC ModERN.
 - `scripts/dup_audit.py` (50-token k-grams, 1/32 content-defined sample): 36% of
   training 50-grams repeated; top repeat (Gospel of Nicodemus) ~470x; the v1 validation
   shard was 55% internally repeated. This invalidated the v1 validation loss as a
-  decision metric (-> 2.3). Evidence: dup_audit JSON **[no file in repo]**.
+  decision metric (-> 2.3). Evidence: `results/2026-11-09/dup_audit_v1.json`.
 
 ## 2. Architecture pilot (GPT+ vs anGPT)
 
@@ -115,7 +117,8 @@ released by ERC ModERN.
 - Prediction written before stage 2 (anGPT 0.15 nats lower): wrong in sign on held-out text.
 - The GPT+ validation plateau/rise after ~2k steps is explained by memorizing corpus
   duplicates (1.6) evaluated on a duplicated validation shard.
-- Evidence: probe JSONs (`scripts/memorization_probe.py`) **[no file in repo]**, W&B group stage 2 **[export not in repo]**.
+- Evidence: `results/2026-11-09/memprobe_s1.json`, `results/2026-11-10/memprobe_s2.json`
+  (`scripts/memorization_probe.py`); W&B group stage 2 **[export not in repo]**.
 
 ### 2.3 Decision on clean validation — 2026-11-10
 - Deferral recorded 2026-11-09 because of 1.6; rule fixed 2026-11-10: same 2x-spread rule
@@ -139,6 +142,8 @@ released by ERC ModERN.
   Optimum flat: half/double params cost +0.044 / +0.078 nats (C4 law).
 - Shape: 18L x 768, 12 heads (4 KV), SwiGLU d_ff 2304, tied embeddings, 148.6M params.
 - Provisional: max_steps 46,305 and keep_steps, to be reset from measured throughput.
+- **Superseded by 4.5 (2026-11-10 evening)**: the 15.7 TFLOP/s input was an eager measurement on a
+  shared server; with the measured throughput the run is no longer compute-bound and the shape changes.
 
 ### 4.2 Schedule and data mix — 2026-11-10
 - WSD, 1000 warmup steps, 1-sqrt cooldown over the last 20% (Hägele et al. 2024),
@@ -151,13 +156,54 @@ released by ERC ModERN.
 
 ### 4.3 LR check (AdamW) — started 2026-11-10 ~15:30
 - 100M tokens each, full-run shape and mix, LR 6e-4 and 1.2e-3. Rule: lower final val
-  loss wins; if gap < 0.01 nats take 6e-4. **[result pending]**
+  loss wins; if gap < 0.01 nats take 6e-4.
+- Result (`results/2026-11-10/lrcheck_v2g.json`): final val loss 4.286 (6e-4), 4.229 (1.2e-3).
+  Gap 0.056 > 0.01 -> **1.2e-3** for AdamW. Warmup 153 steps (10% of 1526). Runs were eager (no compile).
 
-### 4.4 Muon check and throughput — planned 2026-11-10 evening
+### 4.4 Muon check and throughput — 2026-11-10 evening
 - `scripts/bench_throughput.py` (AdamW/Muon x compile x micro-batch). Muon at LR 6e-4
   and 1.2e-3 with settings identical to 4.3. Rule: Muon adopted iff its best final loss
   beats AdamW's best by > 0.01 nats and its per-step overhead is < 10%.
-  Literature: Muon/SOAP ~1.4x over tuned AdamW at 0.1B, ~1.1x at 1.2B (Wen et al. 2025). **[pending]**
+  Literature: Muon/SOAP ~1.4x over tuned AdamW at 0.1B, ~1.1x at 1.2B (Wen et al. 2025).
+- Result (`results/2026-11-10/lrcheck_v2g.json`, `bench_a40.json`): Muon final val loss 4.160 (6e-4),
+  4.078 (1.2e-3); AdamW best 4.229. Muon ahead by 0.13 (6e-4) and 0.15 (1.2e-3), same ordering on
+  `val_enc` and `val_canon`. Overhead < 10% (4.5). Both conditions met -> **Muon adopted**.
+- Caveats: one seed, no noise estimate; AdamW runs eager, Muon runs compiled; 100M tokens is ~2% of
+  the full run, and the literature above reports the advantage shrinking with scale.
+
+### 4.5 Throughput (A40, 148.6M, 65,536 tokens/step) — 2026-11-10
+- `results/2026-11-10/bench_a40.json`: eager 26.3k tok/s (AdamW, mb 8); torch.compile
+  44.8k (mb 32, 31.7 GiB) = 1.7x. Muon per-step overhead: 2.8-3.0% eager, 4.5-4.7% compiled
+  (rule 4.4: < 10%, met).
+- Achieved 39.9 TFLOP/s (6N) vs 15.7 assumed in 4.1 (pilot measured on a shared server,
+  eager). The `tflops` column of the bench file uses 6N plus an attention term (47.5 for the
+  same row); the 6N convention is the one used for sizing. Parameter count and `size_model.py`
+  output **[no file in repo]**.
+- Re-sizing at 48 GPU-h: 29L x 768, 224M params, 5.05B tokens, 1.75 epochs
+  (36 GPU-h: 26L, 204M, 1.48 epochs). Width unchanged (768).
+- Shape (2026-11-10 19:22): go with 29L x 768 unless a better shape is found. Considered:
+  ~21L x 896 and ~16L x 1024 at equal parameters; no quality gain expected from the literature
+  (Levine et al. 2020 fit gives 23L x 555 at 125M and 32L x 886 at 350M; Petty et al. 2023),
+  and a width change discards the LR evidence. Would reconsider if a wider shape benches > 10%
+  faster in tok/s at equal parameters.
+- Not established: that the LR selected at 18L transfers to 29L. Depth transfer is not guaranteed
+  without depth-scaled residual branches (Bordelon et al. 2023; Dey et al. 2025) -> recheck at the
+  final depth (4.6). Micro-batch 32 peaks at 31.7 GiB at 18L and may not fit at 29L (mb 16 costs ~3%).
+- Inductor falls back for the complex-number RoPE ops: a real-valued RoPE would be
+  faster and is the same change the HF conversion needs. It changes throughput, hence the sizing:
+  do it and re-bench before fixing the shape.
+
+### 4.6 Muon LR, 18L, 100M tokens — 2026-11-10 ~20:00
+- Added outside the plan of 4.4 because the highest LR tested won for both optimizers.
+  No prediction written before launch.
+- Result (`results/2026-11-10/lrcheck_v2g.json`): Muon 2.4e-3 final val loss 4.040
+  (`val_enc` 3.131, `val_canon` 3.502). Gain from doubling: 0.082 (6e-4 -> 1.2e-3), 0.038
+  (1.2e-3 -> 2.4e-3). Optimum still not bracketed at this horizon.
+- The lead of 2.4e-3 over 1.2e-3 shrinks through the stable phase (0.105 at step 250, 0.022 at
+  step 1250) and widens only in the cooldown: a short check favours a higher LR than a long run.
+- Decision: stop the 18L sweep. Muon LR is in [1.2e-3, 2.4e-3] or slightly above.
+- Next (one experiment, prediction to be written first): 1.2e-3 vs 2.4e-3 at the final shape,
+  ~500M tokens, after the real-valued RoPE change and re-bench. It covers depth transfer and horizon. **[pending]**
 
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,
@@ -174,8 +220,13 @@ released by ERC ModERN.
   ensembles + distillation (Kim et al. 2025), diffusion LMs for many epochs (Prabhudesai et al. 2025).
 
 ## Evidence still to commit (copy into `results/` and reference from the text)
-- obtic1 `/data/pretrain_candide/`: `inventory_v2/inventory_summary.json`,
-  `dedup_v2g/dedup_summary.json` (and v1f), `tokenizer_v2g/tokenizer.meta.json`,
-  tokenizer eval JSON, `extraction_stats_*.json` (v1f, merged), `exclude_v2g.txt` (counts only if large).
-- GPU server: `extracted_enc/extraction_stats_encyclopedie.json`, dup_audit JSON,
-  probe JSONs (s1, s2), W&B exports of stage 1b and stage 2 (CSV), LR check, bench.
+Committed on 2026-11-09/10 under `results/`: inventory summary, dedup summaries (v2g, v1f),
+tokenizer meta, extraction stats (v1f per sub-corpus, Encyclopédie), exclusion count, dup audit,
+probes (s1, s2), clean rescoring, throughput bench, LR check. Still missing:
+- obtic1 `/data/pretrain_candide/`: tokenizer eval JSON (three noisy-share candidates);
+  `exclude_v2g.txt` breakdown by reason and the command that builds it; shard metadata
+  (token counts per split and sub-corpus for `shards_v2g`, `shards_enc`, `shards_canon`);
+  v1 extraction stats (the 3.3x canon inflation).
+- GPU server: W&B exports of stage 1b and stage 2 (CSV); `size_model.py` output and
+  parameter counts (pilot 118.6M, full run 148.6M, 224M).
+- `configs/full/gptplus_v2g.yaml` as used for the LR check (modified, uncommitted on 2026-11-10 21:00).

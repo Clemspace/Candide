@@ -44,7 +44,7 @@ training:
   cooldown_shape: 1-sqrt
   final_lr_ratio: 0.0
   mixed_precision: bf16
-  eval_every: 500
+  eval_every: 250
   eval_steps: 50
   save_every: 1000
   keep_last: 2

@@ -1,10 +1,11 @@
 {
- "source": "W&B export of 2026-11-10 19:50 CET (runs.csv, history.csv); finished runs only",
+ "source": "W&B export of 2026-11-10 21:01 CET (runs.csv, history.csv), group lrcheck-v2g; finished runs only",
  "model": "GPT+ 18L x 768, 148.6M, v2g shards, 1526 steps x 65,536 tokens = 100M tokens, WSD, seed 1",
  "note": "lrcheck-v2g-6e-4 predates the optimizer/compile options: optimizer adamw and compile false are inferred from the defaults",
  "runs": {
   "adamw-0.0006": {
    "wandb_name": "lrcheck-v2g-6e-4",
+   "wandb_id": "lktl6xle",
    "optimizer": "adamw",
    "learning_rate": 0.0006,
    "compile": false,
@@ -21,6 +22,7 @@
   },
   "adamw-0.0012": {
    "wandb_name": "lrcheck-v2g-1.2e-3",
+   "wandb_id": "n83xhhk7",
    "optimizer": "adamw",
    "learning_rate": 0.0012,
    "compile": false,
@@ -40,6 +42,7 @@
   },
   "muon-0.0006": {
    "wandb_name": "lrcheck-v2g-muon-6e-4",
+   "wandb_id": "efp1acl0",
    "optimizer": "muon",
    "learning_rate": 0.0006,
    "compile": true,
@@ -59,6 +62,7 @@
   },
   "muon-0.0012": {
    "wandb_name": "lrcheck-v2g-muon-1.2e-3",
+   "wandb_id": "o7ze3scd",
    "optimizer": "muon",
    "learning_rate": 0.0012,
    "compile": true,
@@ -74,6 +78,26 @@
     "1000": 4.3426,
     "1250": 4.2384,
     "1500": 4.081
+   }
+  },
+  "muon-0.0024": {
+   "wandb_name": "lrcheck-v2g-muon-2.4e-3",
+   "wandb_id": "izipr2vy",
+   "optimizer": "muon",
+   "learning_rate": 0.0024,
+   "compile": true,
+   "final_loss": 4.0403,
+   "final_enc_loss": 3.1308,
+   "final_canon_loss": 3.5018,
+   "tokens_per_sec_median": 40124,
+   "wall_hours": 0.767,
+   "val_curve": {
+    "250": 5.1475,
+    "500": 4.628,
+    "750": 4.4332,
+    "1000": 4.3196,
+    "1250": 4.2162,
+    "1500": 4.0436
    }
   }
  }
