@@ -1,0 +1,27 @@
+{
+  "shards": "/data/pretrain_candide/shards_v1f",
+  "val_windows": 1600,
+  "val_seed": 0,
+  "runs": {
+    "gptplus-s1": {
+      "loss": 3.63489492893219,
+      "perplexity": 37.89787071819582,
+      "tokens": 1638400
+    },
+    "gptplus-s2": {
+      "loss": 3.6362271761894225,
+      "perplexity": 37.948393699594085,
+      "tokens": 1638400
+    },
+    "angpt-s1": {
+      "loss": 3.8046481788158415,
+      "perplexity": 44.90944723837609,
+      "tokens": 1638400
+    },
+    "angpt-s2": {
+      "loss": 3.799374449253082,
+      "perplexity": 44.67323037822327,
+      "tokens": 1638400
+    }
+  }
+}

@@ -1,0 +1,422 @@
+{
+  "period": [
+    1680,
+    1815
+  ],
+  "corpora": {
+    "modern_archive": {
+      "files": 18066,
+      "chars": 4287462578,
+      "lang_share": {
+        "fr": 0.9883,
+        "en": 0.0107,
+        "la": 0.0007,
+        "de": 0.0001,
+        "it": 0.0001,
+        "?": 0.0
+      },
+      "in_period_share": 0.3947,
+      "undated_share": 0.5962,
+      "year_min": 1673,
+      "year_max": 1909
+    },
+    "modern_canon": {
+      "files": 3384,
+      "chars": 480714391,
+      "lang_share": {
+        "fr": 0.991,
+        "la": 0.0087,
+        "en": 0.0003
+      },
+      "in_period_share": 0.5226,
+      "undated_share": 0.1867,
+      "year_min": 1500,
+      "year_max": 1995
+    },
+    "modern_dicos": {
+      "files": 89,
+      "chars": 468592520,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.3351,
+      "undated_share": 0.6649,
+      "year_min": 1726,
+      "year_max": 1776
+    },
+    "modern_lettres": {
+      "files": 49293,
+      "chars": 104326029,
+      "lang_share": {
+        "fr": 0.6272,
+        "en": 0.3531,
+        "la": 0.0129,
+        "it": 0.004,
+        "de": 0.0027,
+        "?": 0.0001
+      },
+      "in_period_share": 0.9091,
+      "undated_share": 0.0,
+      "year_min": 1619,
+      "year_max": 1845
+    },
+    "modern_merged": {
+      "files": 30330,
+      "chars": 7126438712,
+      "lang_share": {
+        "fr": 0.9928,
+        "en": 0.0034,
+        "la": 0.0033,
+        "de": 0.0004,
+        "it": 0.0001,
+        "?": 0.0
+      },
+      "in_period_share": 0.8467,
+      "undated_share": 0.0,
+      "year_min": 1450,
+      "year_max": 1872
+    },
+    "modern_pamphlets": {
+      "files": 26516,
+      "chars": 751739225,
+      "lang_share": {
+        "fr": 0.9979,
+        "en": 0.0009,
+        "it": 0.0006,
+        "la": 0.0005,
+        "de": 0.0002,
+        "?": 0.0
+      },
+      "in_period_share": 0.9999,
+      "undated_share": 0.0001,
+      "year_min": 1685,
+      "year_max": 1800
+    },
+    "modern_press": {
+      "files": 55707,
+      "chars": 6343903231,
+      "lang_share": {
+        "fr": 0.9994,
+        "en": 0.0006,
+        "?": 0.0
+      },
+      "in_period_share": 0.9935,
+      "undated_share": 0.0,
+      "year_min": 1665,
+      "year_max": 1833
+    }
+  },
+  "sources": {
+    "modern_press/(title-named)": {
+      "files": 55607,
+      "chars": 6161573053,
+      "lang_share": {
+        "fr": 0.9994,
+        "en": 0.0006,
+        "?": 0.0
+      },
+      "in_period_share": 0.9933,
+      "undated_share": 0.0,
+      "year_min": 1665,
+      "year_max": 1833
+    },
+    "modern_merged/(title-named)": {
+      "files": 18567,
+      "chars": 4394951460,
+      "lang_share": {
+        "fr": 0.9949,
+        "la": 0.004,
+        "de": 0.0007,
+        "en": 0.0004,
+        "it": 0.0001,
+        "?": 0.0
+      },
+      "in_period_share": 0.8041,
+      "undated_share": 0.0,
+      "year_min": 1545,
+      "year_max": 1847
+    },
+    "modern_archive/(title-named)": {
+      "files": 18066,
+      "chars": 4287462578,
+      "lang_share": {
+        "fr": 0.9883,
+        "en": 0.0107,
+        "la": 0.0007,
+        "de": 0.0001,
+        "it": 0.0001,
+        "?": 0.0
+      },
+      "in_period_share": 0.3947,
+      "undated_share": 0.5962,
+      "year_min": 1673,
+      "year_max": 1909
+    },
+    "modern_merged/goldsmith": {
+      "files": 4567,
+      "chars": 972056035,
+      "lang_share": {
+        "fr": 0.9967,
+        "en": 0.0016,
+        "la": 0.0012,
+        "de": 0.0003,
+        "it": 0.0002,
+        "?": 0.0
+      },
+      "in_period_share": 0.9677,
+      "undated_share": 0.0,
+      "year_min": 1481,
+      "year_max": 1803
+    },
+    "modern_pamphlets/(title-named)": {
+      "files": 26516,
+      "chars": 751739225,
+      "lang_share": {
+        "fr": 0.9979,
+        "en": 0.0009,
+        "it": 0.0006,
+        "la": 0.0005,
+        "de": 0.0002,
+        "?": 0.0
+      },
+      "in_period_share": 0.9999,
+      "undated_share": 0.0001,
+      "year_min": 1685,
+      "year_max": 1800
+    },
+    "modern_merged/ecco": {
+      "files": 2386,
+      "chars": 659627910,
+      "lang_share": {
+        "fr": 0.9683,
+        "en": 0.0313,
+        "la": 0.0004
+      },
+      "in_period_share": 0.9793,
+      "undated_share": 0.0,
+      "year_min": 1490,
+      "year_max": 1800
+    },
+    "modern_canon/(title-named)": {
+      "files": 3384,
+      "chars": 480714391,
+      "lang_share": {
+        "fr": 0.991,
+        "la": 0.0087,
+        "en": 0.0003
+      },
+      "in_period_share": 0.5226,
+      "undated_share": 0.1867,
+      "year_min": 1500,
+      "year_max": 1995
+    },
+    "modern_dicos/(title-named)": {
+      "files": 89,
+      "chars": 468592520,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.3351,
+      "undated_share": 0.6649,
+      "year_min": 1726,
+      "year_max": 1776
+    },
+    "modern_merged/frantext18": {
+      "files": 966,
+      "chars": 304402323,
+      "lang_share": {
+        "fr": 0.9994,
+        "la": 0.0006
+      },
+      "in_period_share": 0.6507,
+      "undated_share": 0.0,
+      "year_min": 1484,
+      "year_max": 1815
+    },
+    "modern_press/goldsmith": {
+      "files": 98,
+      "chars": 181782214,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1751,
+      "year_max": 1795
+    },
+    "modern_merged/tgb": {
+      "files": 753,
+      "chars": 170559957,
+      "lang_share": {
+        "fr": 0.9999,
+        "la": 0.0001
+      },
+      "in_period_share": 0.9817,
+      "undated_share": 0.0,
+      "year_min": 1617,
+      "year_max": 1799
+    },
+    "modern_merged/theatre18": {
+      "files": 1914,
+      "chars": 119255884,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.7294,
+      "undated_share": 0.0,
+      "year_min": 1501,
+      "year_max": 1822
+    },
+    "modern_lettres/(title-named)": {
+      "files": 49293,
+      "chars": 104326029,
+      "lang_share": {
+        "fr": 0.6272,
+        "en": 0.3531,
+        "la": 0.0129,
+        "it": 0.004,
+        "de": 0.0027,
+        "?": 0.0001
+      },
+      "in_period_share": 0.9091,
+      "undated_share": 0.0,
+      "year_min": 1619,
+      "year_max": 1845
+    },
+    "modern_merged/esthetique": {
+      "files": 256,
+      "chars": 82905922,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.9696,
+      "undated_share": 0.0,
+      "year_min": 1657,
+      "year_max": 1818
+    },
+    "modern_merged/les": {
+      "files": 124,
+      "chars": 63771996,
+      "lang_share": {
+        "fr": 0.9922,
+        "en": 0.0078
+      },
+      "in_period_share": 0.8319,
+      "undated_share": 0.0,
+      "year_min": 1645,
+      "year_max": 1785
+    },
+    "modern_merged/histoire": {
+      "files": 56,
+      "chars": 54993247,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1705,
+      "year_max": 1786
+    },
+    "modern_merged/oeuvres": {
+      "files": 75,
+      "chars": 50369674,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.7041,
+      "undated_share": 0.0,
+      "year_min": 1604,
+      "year_max": 1788
+    },
+    "modern_merged/supp": {
+      "files": 207,
+      "chars": 50142105,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.9815,
+      "undated_share": 0.0,
+      "year_min": 1571,
+      "year_max": 1814
+    },
+    "modern_merged/l": {
+      "files": 30,
+      "chars": 14198378,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.7195,
+      "undated_share": 0.0,
+      "year_min": 1657,
+      "year_max": 1787
+    },
+    "modern_merged/lettres": {
+      "files": 27,
+      "chars": 13840762,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1701,
+      "year_max": 1781
+    },
+    "modern_merged/traduction": {
+      "files": 29,
+      "chars": 13657749,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1704,
+      "year_max": 1796
+    },
+    "modern_merged/(other small)": {
+      "files": 331,
+      "chars": 147919792,
+      "lang_share": {
+        "fr": 0.9731,
+        "la": 0.0269
+      },
+      "in_period_share": 0.9215,
+      "undated_share": 0.0,
+      "year_min": 1450,
+      "year_max": 1872
+    },
+    "modern_merged/tr": {
+      "files": 20,
+      "chars": 8034664,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1715,
+      "year_max": 1814
+    },
+    "modern_merged/stn": {
+      "files": 22,
+      "chars": 5750854,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 0.9712,
+      "undated_share": 0.0,
+      "year_min": 1665,
+      "year_max": 1783
+    },
+    "modern_press/(other small)": {
+      "files": 2,
+      "chars": 547964,
+      "lang_share": {
+        "fr": 1.0
+      },
+      "in_period_share": 1.0,
+      "undated_share": 0.0,
+      "year_min": 1799,
+      "year_max": 1799
+    }
+  },
+  "errors": 0
+}

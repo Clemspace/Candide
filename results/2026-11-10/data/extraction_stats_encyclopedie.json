@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-11-10T13:15:21.558151",
+  "base_dir": "/home/ccastellon/corpora/modern",
+  "out_dir": "/data/pretrain_candide/extracted_enc",
+  "dry_run": false,
+  "subcorpora": {
+    "encyclopedie": {
+      "files_found": 17,
+      "articles": 74199,
+      "div1_in_raw": 74199,
+      "articles_failed": 0,
+      "articles_empty": 0,
+      "index_tags_removed": 793108,
+      "bare_amp_escaped": 44,
+      "files_extracted": 17,
+      "total_chars": 117458479,
+      "total_words": 20012862
+    }
+  },
+  "total_words": 20012862,
+  "total_files": 17,
+  "total_tokens_est": 26016720.6
+}

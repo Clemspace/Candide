@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-11-10T11:46:29.845616",
+  "base_dir": "/data/corpora/modern",
+  "out_dir": "/data/pretrain_candide/extracted_v1f",
+  "dry_run": false,
+  "subcorpora": {
+    "modern_pamphlets": {
+      "files_found": 26516,
+      "files_extracted": 26510,
+      "total_chars": 751449176,
+      "total_words": 133267224,
+      "files_empty": 6
+    }
+  },
+  "total_words": 133267224,
+  "total_files": 26510,
+  "total_tokens_est": 173247391.20000002
+}

@@ -1,0 +1,121 @@
+{
+  "params": {
+    "extracted_dir": "/data/pretrain_candide/extracted_v1f",
+    "out_dir": "/data/pretrain_candide/dedup_v2g",
+    "seed": 42,
+    "sources": "v2",
+    "k": 200,
+    "sample_shift": 6,
+    "max_containment": 0.8,
+    "max_intra_dup": 0.3,
+    "val_fraction": 0.005,
+    "val_max_shared": 0.02,
+    "val_min_chars": 2000,
+    "workers": 16,
+    "exclude_list": "/data/pretrain_candide/exclude_v2g.txt"
+  },
+  "files": 151669,
+  "seconds": 114,
+  "restored_by_correction": 1,
+  "subcorpora": {
+    "modern_canon": {
+      "files": 2788,
+      "chars": 380605275,
+      "kept_chars": 369427154,
+      "near_dup_chars": 4992,
+      "internal_rep_chars": 0,
+      "near_dup_files": 5,
+      "internal_rep_files": 0,
+      "excluded_chars": 11173129,
+      "excluded_files": 62,
+      "val_files": 13,
+      "val_chars": 1848864
+    },
+    "modern_press": {
+      "files": 55701,
+      "chars": 6338637108,
+      "kept_chars": 3115101128,
+      "near_dup_chars": 3207635943,
+      "internal_rep_chars": 0,
+      "near_dup_files": 27863,
+      "internal_rep_files": 0,
+      "excluded_chars": 15900037,
+      "excluded_files": 41,
+      "val_files": 163,
+      "val_chars": 15577693
+    },
+    "modern_dicos": {
+      "files": 84,
+      "chars": 269498684,
+      "kept_chars": 269498684,
+      "near_dup_chars": 0,
+      "internal_rep_chars": 0,
+      "near_dup_files": 0,
+      "internal_rep_files": 0,
+      "excluded_chars": 0,
+      "excluded_files": 0,
+      "val_files": 3,
+      "val_chars": 1351903
+    },
+    "modern_pamphlets": {
+      "files": 21208,
+      "chars": 599177758,
+      "kept_chars": 597661454,
+      "near_dup_chars": 69082,
+      "internal_rep_chars": 0,
+      "near_dup_files": 1,
+      "internal_rep_files": 0,
+      "excluded_chars": 1447222,
+      "excluded_files": 64,
+      "val_files": 129,
+      "val_chars": 2999321
+    },
+    "modern_lettres": {
+      "files": 39361,
+      "chars": 83512017,
+      "kept_chars": 51522840,
+      "near_dup_chars": 35906,
+      "internal_rep_chars": 0,
+      "near_dup_files": 25,
+      "internal_rep_files": 0,
+      "excluded_chars": 31953271,
+      "excluded_files": 14861,
+      "val_files": 70,
+      "val_chars": 257533
+    },
+    "modern_archive": {
+      "files": 2379,
+      "chars": 520610598,
+      "kept_chars": 463245816,
+      "near_dup_chars": 52761631,
+      "internal_rep_chars": 0,
+      "near_dup_files": 201,
+      "internal_rep_files": 0,
+      "excluded_chars": 4603151,
+      "excluded_files": 9,
+      "val_files": 16,
+      "val_chars": 2333767
+    },
+    "modern_merged": {
+      "files": 30148,
+      "chars": 6950794486,
+      "kept_chars": 6234978484,
+      "near_dup_chars": 626223811,
+      "internal_rep_chars": 942910,
+      "near_dup_files": 3829,
+      "internal_rep_files": 1,
+      "excluded_chars": 88649281,
+      "excluded_files": 282,
+      "val_files": 121,
+      "val_chars": 31223405
+    }
+  },
+  "total": {
+    "chars": 15142835926,
+    "kept_chars": 11101435560,
+    "near_dup_chars": 3886731365,
+    "internal_rep_chars": 942910,
+    "excluded_chars": 153726091,
+    "val_chars": 55592486
+  }
+}

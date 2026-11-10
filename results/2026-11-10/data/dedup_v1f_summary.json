@@ -1,0 +1,107 @@
+{
+  "params": {
+    "extracted_dir": "/data/pretrain_candide/extracted_v1f",
+    "out_dir": "/data/pretrain_candide/dedup_v1f",
+    "seed": 42,
+    "k": 200,
+    "sample_shift": 6,
+    "max_containment": 0.8,
+    "max_intra_dup": 0.3,
+    "val_fraction": 0.005,
+    "val_max_shared": 0.02,
+    "val_min_chars": 2000,
+    "workers": 16,
+    "exclude_list": "/data/pretrain_candide/exclude_nonfr.txt"
+  },
+  "files": 121521,
+  "seconds": 68,
+  "restored_by_correction": 0,
+  "subcorpora": {
+    "modern_canon": {
+      "files": 2788,
+      "chars": 380605275,
+      "kept_chars": 376322831,
+      "near_dup_chars": 4992,
+      "internal_rep_chars": 0,
+      "near_dup_files": 5,
+      "internal_rep_files": 0,
+      "excluded_chars": 4277452,
+      "excluded_files": 8,
+      "val_files": 14,
+      "val_chars": 1883139
+    },
+    "modern_press": {
+      "files": 55701,
+      "chars": 6338637108,
+      "kept_chars": 3125320746,
+      "near_dup_chars": 3211494447,
+      "internal_rep_chars": 0,
+      "near_dup_files": 27868,
+      "internal_rep_files": 0,
+      "excluded_chars": 1821915,
+      "excluded_files": 3,
+      "val_files": 222,
+      "val_chars": 15628648
+    },
+    "modern_dicos": {
+      "files": 84,
+      "chars": 269498684,
+      "kept_chars": 269498684,
+      "near_dup_chars": 0,
+      "internal_rep_chars": 0,
+      "near_dup_files": 0,
+      "internal_rep_files": 0,
+      "excluded_chars": 0,
+      "excluded_files": 0,
+      "val_files": 2,
+      "val_chars": 1531320
+    },
+    "modern_pamphlets": {
+      "files": 21208,
+      "chars": 599177758,
+      "kept_chars": 597661454,
+      "near_dup_chars": 69082,
+      "internal_rep_chars": 0,
+      "near_dup_files": 1,
+      "internal_rep_files": 0,
+      "excluded_chars": 1447222,
+      "excluded_files": 64,
+      "val_files": 84,
+      "val_chars": 3282886
+    },
+    "modern_lettres": {
+      "files": 39361,
+      "chars": 83512017,
+      "kept_chars": 52374979,
+      "near_dup_chars": 35906,
+      "internal_rep_chars": 0,
+      "near_dup_files": 25,
+      "internal_rep_files": 0,
+      "excluded_chars": 31101132,
+      "excluded_files": 14505,
+      "val_files": 55,
+      "val_chars": 263138
+    },
+    "modern_archive": {
+      "files": 2379,
+      "chars": 520610598,
+      "kept_chars": 463260699,
+      "near_dup_chars": 52761631,
+      "internal_rep_chars": 0,
+      "near_dup_files": 201,
+      "internal_rep_files": 0,
+      "excluded_chars": 4588268,
+      "excluded_files": 7,
+      "val_files": 11,
+      "val_chars": 2402715
+    }
+  },
+  "total": {
+    "chars": 8192041440,
+    "kept_chars": 4884439393,
+    "near_dup_chars": 3264366058,
+    "internal_rep_chars": 0,
+    "excluded_chars": 43235989,
+    "val_chars": 24991846
+  }
+}

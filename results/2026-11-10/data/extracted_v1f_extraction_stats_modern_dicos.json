@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-11-10T11:45:16.976426",
+  "base_dir": "/data/corpora/modern",
+  "out_dir": "/data/pretrain_candide/extracted_v1f",
+  "dry_run": false,
+  "subcorpora": {
+    "modern_dicos": {
+      "files_found": 89,
+      "files_extracted": 84,
+      "total_chars": 269498684,
+      "total_words": 46430751,
+      "files_empty": 5
+    }
+  },
+  "total_words": 46430751,
+  "total_files": 84,
+  "total_tokens_est": 60359976.300000004
+}

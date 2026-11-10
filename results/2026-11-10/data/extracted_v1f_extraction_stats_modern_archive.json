@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-11-10T11:51:22.569260",
+  "base_dir": "/data/corpora/modern",
+  "out_dir": "/data/pretrain_candide/extracted_v1f",
+  "dry_run": false,
+  "subcorpora": {
+    "modern_archive": {
+      "files_found": 18066,
+      "files_extracted": 15863,
+      "total_chars": 3770606066,
+      "total_words": 650143037,
+      "files_empty": 2203
+    }
+  },
+  "total_words": 650143037,
+  "total_files": 15863,
+  "total_tokens_est": 845185948.1
+}
