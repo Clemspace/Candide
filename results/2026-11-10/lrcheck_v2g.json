@@ -1,0 +1,80 @@
+{
+ "source": "W&B export of 2026-11-10 19:50 CET (runs.csv, history.csv); finished runs only",
+ "model": "GPT+ 18L x 768, 148.6M, v2g shards, 1526 steps x 65,536 tokens = 100M tokens, WSD, seed 1",
+ "note": "lrcheck-v2g-6e-4 predates the optimizer/compile options: optimizer adamw and compile false are inferred from the defaults",
+ "runs": {
+  "adamw-0.0006": {
+   "wandb_name": "lrcheck-v2g-6e-4",
+   "optimizer": "adamw",
+   "learning_rate": 0.0006,
+   "compile": false,
+   "final_loss": 4.2857,
+   "final_enc_loss": 3.3979,
+   "final_canon_loss": 3.7532,
+   "tokens_per_sec_median": 26206,
+   "wall_hours": 1.109,
+   "val_curve": {
+    "500": 5.0792,
+    "1000": 4.5783,
+    "1500": 4.2885
+   }
+  },
+  "adamw-0.0012": {
+   "wandb_name": "lrcheck-v2g-1.2e-3",
+   "optimizer": "adamw",
+   "learning_rate": 0.0012,
+   "compile": false,
+   "final_loss": 4.2293,
+   "final_enc_loss": 3.3335,
+   "final_canon_loss": 3.688,
+   "tokens_per_sec_median": 26306,
+   "wall_hours": 1.142,
+   "val_curve": {
+    "250": 5.6168,
+    "500": 5.0047,
+    "750": 4.6991,
+    "1000": 4.5412,
+    "1250": 4.4041,
+    "1500": 4.2328
+   }
+  },
+  "muon-0.0006": {
+   "wandb_name": "lrcheck-v2g-muon-6e-4",
+   "optimizer": "muon",
+   "learning_rate": 0.0006,
+   "compile": true,
+   "final_loss": 4.1602,
+   "final_enc_loss": 3.2598,
+   "final_canon_loss": 3.6334,
+   "tokens_per_sec_median": 40130,
+   "wall_hours": 0.775,
+   "val_curve": {
+    "250": 5.4948,
+    "500": 4.8613,
+    "750": 4.5779,
+    "1000": 4.4098,
+    "1250": 4.2947,
+    "1500": 4.1625
+   }
+  },
+  "muon-0.0012": {
+   "wandb_name": "lrcheck-v2g-muon-1.2e-3",
+   "optimizer": "muon",
+   "learning_rate": 0.0012,
+   "compile": true,
+   "final_loss": 4.0781,
+   "final_enc_loss": 3.1695,
+   "final_canon_loss": 3.5432,
+   "tokens_per_sec_median": 40166,
+   "wall_hours": 0.767,
+   "val_curve": {
+    "250": 5.2523,
+    "500": 4.7014,
+    "750": 4.4662,
+    "1000": 4.3426,
+    "1250": 4.2384,
+    "1500": 4.081
+   }
+  }
+ }
+}

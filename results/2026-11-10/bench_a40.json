@@ -1,0 +1,128 @@
+{
+  "config": "configs/full/gptplus_v2g.yaml",
+  "gpu": "NVIDIA A40",
+  "rows": [
+    {
+      "optimizer": "adamw",
+      "compile": false,
+      "micro_batch": 8,
+      "tokens_per_sec": 26326,
+      "sec_per_step": 2.489,
+      "tflops": 27.9,
+      "peak_mem_gib": 13.2,
+      "warmup_sec": 7.8,
+      "accum": 8
+    },
+    {
+      "optimizer": "adamw",
+      "compile": false,
+      "micro_batch": 16,
+      "tokens_per_sec": 27250,
+      "sec_per_step": 2.405,
+      "tflops": 28.9,
+      "peak_mem_gib": 23.7,
+      "warmup_sec": 7.2,
+      "accum": 4
+    },
+    {
+      "optimizer": "adamw",
+      "compile": false,
+      "micro_batch": 32,
+      "error": "out of memory"
+    },
+    {
+      "optimizer": "adamw",
+      "compile": true,
+      "micro_batch": 8,
+      "tokens_per_sec": 42079,
+      "sec_per_step": 1.557,
+      "tflops": 44.7,
+      "peak_mem_gib": 9.8,
+      "warmup_sec": 40.2,
+      "accum": 8
+    },
+    {
+      "optimizer": "adamw",
+      "compile": true,
+      "micro_batch": 16,
+      "tokens_per_sec": 43504,
+      "sec_per_step": 1.506,
+      "tflops": 46.2,
+      "peak_mem_gib": 17.1,
+      "warmup_sec": 39.6,
+      "accum": 4
+    },
+    {
+      "optimizer": "adamw",
+      "compile": true,
+      "micro_batch": 32,
+      "tokens_per_sec": 44778,
+      "sec_per_step": 1.464,
+      "tflops": 47.5,
+      "peak_mem_gib": 31.7,
+      "warmup_sec": 39.9,
+      "accum": 2
+    },
+    {
+      "optimizer": "muon",
+      "compile": false,
+      "micro_batch": 8,
+      "tokens_per_sec": 25617,
+      "sec_per_step": 2.558,
+      "tflops": 27.2,
+      "peak_mem_gib": 12.7,
+      "warmup_sec": 7.7,
+      "accum": 8
+    },
+    {
+      "optimizer": "muon",
+      "compile": false,
+      "micro_batch": 16,
+      "tokens_per_sec": 26468,
+      "sec_per_step": 2.476,
+      "tflops": 28.1,
+      "peak_mem_gib": 23.3,
+      "warmup_sec": 7.4,
+      "accum": 4
+    },
+    {
+      "optimizer": "muon",
+      "compile": false,
+      "micro_batch": 32,
+      "error": "out of memory"
+    },
+    {
+      "optimizer": "muon",
+      "compile": true,
+      "micro_batch": 8,
+      "tokens_per_sec": 40282,
+      "sec_per_step": 1.627,
+      "tflops": 42.8,
+      "peak_mem_gib": 9.3,
+      "warmup_sec": 20.7,
+      "accum": 8
+    },
+    {
+      "optimizer": "muon",
+      "compile": true,
+      "micro_batch": 16,
+      "tokens_per_sec": 41553,
+      "sec_per_step": 1.577,
+      "tflops": 44.1,
+      "peak_mem_gib": 16.6,
+      "warmup_sec": 20.7,
+      "accum": 4
+    },
+    {
+      "optimizer": "muon",
+      "compile": true,
+      "micro_batch": 32,
+      "tokens_per_sec": 42755,
+      "sec_per_step": 1.533,
+      "tflops": 45.4,
+      "peak_mem_gib": 31.2,
+      "warmup_sec": 20.4,
+      "accum": 2
+    }
+  ]
+}
