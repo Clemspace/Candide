@@ -104,6 +104,12 @@ class TrainingConfig:
     cooldown_shape: str = "1-sqrt"
     final_lr_ratio: float = 0.0
     cooldown_start: Optional[int] = None
+    # Checkpoint retention (None = keep every step_N.pt, as before).
+    # keep_last: newest step checkpoints kept for resuming; keep_steps: steps
+    # never deleted (stable-phase branch points for cooldowns). pre_cooldown.pt
+    # and final.pt are never deleted.
+    keep_last: Optional[int] = None
+    keep_steps: list = field(default_factory=list)
 
 @dataclass
 class DataConfig:
@@ -398,6 +404,26 @@ def latest_checkpoint(output_dir: str) -> Optional[Path]:
         if m:
             found.append((int(m.group(1)), f))
     return max(found)[1] if found else None
+
+
+def prune_checkpoints(output_dir: str, keep_last: Optional[int], keep_steps=()) -> list:
+    """Delete step_N.pt except the keep_last newest and those in keep_steps; returns deleted paths."""
+    if keep_last is None:
+        return []
+    found = []
+    for f in (Path(output_dir) / "checkpoints").glob("step_*.pt"):
+        m = re.fullmatch(r"step_(\d+)\.pt", f.name)
+        if m:
+            found.append((int(m.group(1)), f))
+    found.sort()
+    keep = {step for step, _ in found[-keep_last:]} if keep_last > 0 else set()
+    keep |= set(int(k) for k in keep_steps)
+    deleted = []
+    for step, f in found:
+        if step not in keep:
+            f.unlink()
+            deleted.append(f)
+    return deleted
 
 
 def rng_state() -> dict:
@@ -709,6 +735,9 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         # Checkpoint
         if global_step % cfg.training.save_every == 0:
             checkpoint()
+            for f in prune_checkpoints(cfg.logging.output_dir, cfg.training.keep_last,
+                                       cfg.training.keep_steps):
+                log.info(f"Checkpoint deleted (retention): {f.name}")
 
     # Final eval + checkpoint
     val_metrics = evaluate_all(eval_final)

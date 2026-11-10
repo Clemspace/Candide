@@ -1,0 +1,76 @@
+# Candide v2g full run.
+#   Architecture: GPT+ (decided 2026-11-10: clean-val rescore of stage 2,
+#     GPT+ 3.636 vs anGPT 3.802 over 2 seeds; results/2026-11-10/rescore_v1f.json).
+#   Shape: scripts/size_model.py for 2.89B unique tokens (shards_v2g 2,863M +
+#     Encyclopédie 26.5M), 48 A40-hours, 15.7 TFLOP/s achieved (118.6M params at
+#     22k tok/s): N ~ 150M, about one epoch. Shape rule: head_dim 64, KV ratio 3,
+#     SwiGLU d_ff = 3 d_model, tied embeddings.
+#   max_steps and keep_steps are set from the throughput measured in the LR check
+#     (48 h x tokens/s / 65,536); learning_rate from the LR check itself.
+#   Data: main corpus once; the Encyclopédie about once in the stable phase and
+#     once more in the cooldown, with canon upsampled in the cooldown
+#     (mid-training / annealing on high-quality text: MiniCPM, Llama 3, OLMo 2).
+model:
+  arch: gpt
+  qk_norm: true
+  vocab_size: 32132
+  d_model: 768
+  n_layers: 18
+  n_heads: 12
+  n_kv_heads: 4
+  d_ff: 2304
+  max_seq_len: 1024
+  dropout: 0.0
+  norm_first: true
+  norm_type: rms
+  attention_type: gqa
+  ffn_type: swiglu
+  use_rope: true
+  rope_theta: 10000.0
+  bias: false
+  tie_word_embeddings: true
+
+training:
+  max_steps: 46305              # PROVISIONAL: reset from measured tokens/s
+  batch_size: 8
+  gradient_accumulation_steps: 8   # 64 x 1024 = 65,536 tokens per step
+  learning_rate: 1.2e-3         # PROVISIONAL: LR check
+  weight_decay: 0.1
+  grad_clip: 1.0
+  warmup_steps: 1000
+  min_lr: 1.2e-4                # cosine only; unused with wsd
+  schedule: wsd
+  cooldown_frac: 0.2
+  cooldown_shape: 1-sqrt
+  final_lr_ratio: 0.0
+  mixed_precision: bf16
+  eval_every: 500
+  eval_steps: 50
+  save_every: 1000
+  keep_last: 2
+  keep_steps: [9000, 18000, 27000, 36000]   # PROVISIONAL: ~20/40/60/80% of max_steps
+  log_every: 10
+  seed: 1
+
+data:
+  shards_dir: /data/pretrain_candide/shards_v2g     # source "main" + validation
+  sources:
+    enc: /data/pretrain_candide/shards_enc
+    canon: /data/pretrain_candide/shards_canon
+  mix: {main: 0.988, enc: 0.012}
+  cooldown_mix: {main: 0.80, canon: 0.15, enc: 0.05}
+  extra_val:
+    enc: /data/pretrain_candide/shards_enc          # held-out volume 17
+    canon: /data/pretrain_candide/shards_canon
+  sequence_length: 1024
+  num_workers: 2
+  train_order: global
+  val_windows: 1600
+  val_seed: 0
+
+logging:
+  wandb_project: candide-18c
+  wandb_run_name: candide-v2g-150m
+  wandb_group: full-v2g
+  wandb_tags: [candide, 18c-french, full-run, v2g, gptplus]
+  output_dir: ./runs/full/candide-v2g-150m

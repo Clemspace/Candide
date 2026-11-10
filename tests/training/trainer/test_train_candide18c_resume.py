@@ -123,6 +123,29 @@ def test_latest_checkpoint(tmp_path):
     assert script.latest_checkpoint(str(tmp_path)).name == "step_1000.pt"
 
 
+def test_prune_checkpoints(tmp_path):
+    ck = tmp_path / "checkpoints"
+    ck.mkdir()
+    for n in (1000, 2000, 3000, 4000, 5000):
+        (ck / f"step_{n}.pt").touch()
+    for name in ("final.pt", "pre_cooldown.pt"):
+        (ck / name).touch()
+    assert script.prune_checkpoints(str(tmp_path), None) == []          # default: keep all
+    deleted = script.prune_checkpoints(str(tmp_path), keep_last=2, keep_steps=[2000])
+    assert sorted(f.name for f in deleted) == ["step_1000.pt", "step_3000.pt"]
+    assert sorted(f.name for f in ck.iterdir()) == ["final.pt", "pre_cooldown.pt", "step_2000.pt",
+                                                     "step_4000.pt", "step_5000.pt"]
+
+
+def test_retention_during_training(tmp_path):
+    _shards(tmp_path / "main", 0)
+    cfg = _cfg(tmp_path, "r", max_steps=6)
+    cfg.training.save_every, cfg.training.keep_last, cfg.training.keep_steps = 1, 2, [2]
+    script.train(cfg)
+    names = sorted(f.name for f in (tmp_path / "r" / "checkpoints").iterdir())
+    assert names == ["final.pt", "step_2.pt", "step_5.pt", "step_6.pt"]
+
+
 def test_config_errors(tmp_path):
     _shards(tmp_path / "main", 0)
     cfg = _cfg(tmp_path, "x", mix={"main": 1.0}, cooldown_mix={"main": 0.5, "enc": 0.5})
