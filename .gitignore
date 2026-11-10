@@ -385,3 +385,7 @@ install_cuda.sh
 /wandb/
 /wandb_export/
 /*.png
+
+# tracked result files (small JSON)
+!/results/
+!/results/**

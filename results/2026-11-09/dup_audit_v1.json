@@ -1,0 +1,347 @@
+{
+  "k": 50,
+  "sample": "1/32",
+  "train": {
+    "kept": 54711113,
+    "distinct": 39460889,
+    "dup_fraction": 0.3640165572943106,
+    "excess_fraction": 0.27874088395898655,
+    "positions_by_count": {
+      "1": 0.6359834427056894,
+      "2-9": 0.17974885650745215,
+      "10-99": 0.09119829092126128,
+      "100+": 0.09306940986559714
+    }
+  },
+  "val": {
+    "kept": 396982,
+    "distinct": 186351,
+    "dup_fraction": 0.5502138636008685,
+    "excess_fraction": 0.5305807316200735,
+    "positions_by_count": {
+      "1": 0.44978613639913145,
+      "2-9": 0.03254303721579316,
+      "10-99": 0.09718072859726637,
+      "100+": 0.420490097787809
+    }
+  },
+  "val_kgrams_also_in_train": 0.09889113360303489,
+  "train_shards": [
+    {
+      "shard": "shard_00000.bin",
+      "kept": 3132821,
+      "distinct": 2201188,
+      "dup_fraction": 0.33774767214596685,
+      "excess_fraction": 0.29737830536759047,
+      "positions_by_count": {
+        "1": 0.6622523278540332,
+        "2-9": 0.07971952435201372,
+        "10-99": 0.19497858320025307,
+        "100+": 0.06304956459370005
+      }
+    },
+    {
+      "shard": "shard_00001.bin",
+      "kept": 3122032,
+      "distinct": 2444117,
+      "dup_fraction": 0.2652134891634679,
+      "excess_fraction": 0.2171390299650997,
+      "positions_by_count": {
+        "1": 0.7347865108365321,
+        "2-9": 0.10858537004105019,
+        "10-99": 0.0748925699672521,
+        "100+": 0.08173554915516561
+      }
+    },
+    {
+      "shard": "shard_00002.bin",
+      "kept": 3126790,
+      "distinct": 2567088,
+      "dup_fraction": 0.2187185580099719,
+      "excess_fraction": 0.1790021075927709,
+      "positions_by_count": {
+        "1": 0.7812814419900281,
+        "2-9": 0.08812296316669811,
+        "10-99": 0.0772549483655762,
+        "100+": 0.053340646477697574
+      }
+    },
+    {
+      "shard": "shard_00003.bin",
+      "kept": 3127732,
+      "distinct": 2407372,
+      "dup_fraction": 0.26063326397530223,
+      "excess_fraction": 0.23031385041940933,
+      "positions_by_count": {
+        "1": 0.7393667360246977,
+        "2-9": 0.0676538143293607,
+        "10-99": 0.08189224652240025,
+        "100+": 0.11108720312354127
+      }
+    },
+    {
+      "shard": "shard_00004.bin",
+      "kept": 3143593,
+      "distinct": 2395569,
+      "dup_fraction": 0.28377687569605864,
+      "excess_fraction": 0.23795192316562608,
+      "positions_by_count": {
+        "1": 0.7162231243039414,
+        "2-9": 0.09226130736389856,
+        "10-99": 0.07987229899035912,
+        "100+": 0.11164326934180092
+      }
+    },
+    {
+      "shard": "shard_00005.bin",
+      "kept": 3120034,
+      "distinct": 2678707,
+      "dup_fraction": 0.19076554934978274,
+      "excess_fraction": 0.1414494201024732,
+      "positions_by_count": {
+        "1": 0.8092344506502173,
+        "2-9": 0.10279471313453635,
+        "10-99": 0.05055361576187952,
+        "100+": 0.03741722045336685
+      }
+    },
+    {
+      "shard": "shard_00006.bin",
+      "kept": 3121403,
+      "distinct": 2340286,
+      "dup_fraction": 0.288897332385469,
+      "excess_fraction": 0.25024548256024615,
+      "positions_by_count": {
+        "1": 0.711102667614531,
+        "2-9": 0.08392476075662131,
+        "10-99": 0.053036086657185885,
+        "100+": 0.1519364849716618
+      }
+    },
+    {
+      "shard": "shard_00007.bin",
+      "kept": 3125975,
+      "distinct": 2169806,
+      "dup_fraction": 0.3546787802205712,
+      "excess_fraction": 0.3058786458624909,
+      "positions_by_count": {
+        "1": 0.6453212197794288,
+        "2-9": 0.1520738329641152,
+        "10-99": 0.13783571525683985,
+        "100+": 0.06476923199961612
+      }
+    },
+    {
+      "shard": "shard_00008.bin",
+      "kept": 3126912,
+      "distinct": 2629593,
+      "dup_fraction": 0.19267539348724877,
+      "excess_fraction": 0.15904477004789386,
+      "positions_by_count": {
+        "1": 0.8073246065127513,
+        "2-9": 0.07210372405747267,
+        "10-99": 0.04564759097793606,
+        "100+": 0.07492407845184003
+      }
+    },
+    {
+      "shard": "shard_00009.bin",
+      "kept": 3139477,
+      "distinct": 1913315,
+      "dup_fraction": 0.4645547650134083,
+      "excess_fraction": 0.3905625045190648,
+      "positions_by_count": {
+        "1": 0.5354452349865917,
+        "2-9": 0.21871923253459094,
+        "10-99": 0.1676193200332412,
+        "100+": 0.07821621244557612
+      }
+    },
+    {
+      "shard": "shard_00010.bin",
+      "kept": 3126653,
+      "distinct": 2796489,
+      "dup_fraction": 0.14608208841851014,
+      "excess_fraction": 0.10559662360997524,
+      "positions_by_count": {
+        "1": 0.8539179115814899,
+        "2-9": 0.08360953390094776,
+        "10-99": 0.03418895541014625,
+        "100+": 0.02828359910741614
+      }
+    },
+    {
+      "shard": "shard_00011.bin",
+      "kept": 3125074,
+      "distinct": 2298094,
+      "dup_fraction": 0.3218624582969875,
+      "excess_fraction": 0.2646273336247398,
+      "positions_by_count": {
+        "1": 0.6781375417030124,
+        "2-9": 0.13852631969674958,
+        "10-99": 0.06036785048930041,
+        "100+": 0.12296828811093753
+      }
+    },
+    {
+      "shard": "shard_00012.bin",
+      "kept": 3130090,
+      "distinct": 2288862,
+      "dup_fraction": 0.3039842304853854,
+      "excess_fraction": 0.26875521151149007,
+      "positions_by_count": {
+        "1": 0.6960157695146146,
+        "2-9": 0.06827439466596807,
+        "10-99": 0.07017497899421422,
+        "100+": 0.1655348568252031
+      }
+    },
+    {
+      "shard": "shard_00013.bin",
+      "kept": 3133379,
+      "distinct": 2257974,
+      "dup_fraction": 0.3519810402763279,
+      "excess_fraction": 0.27938050264586567,
+      "positions_by_count": {
+        "1": 0.6480189597236721,
+        "2-9": 0.19014648403528586,
+        "10-99": 0.10603153975309083,
+        "100+": 0.05580301648795118
+      }
+    },
+    {
+      "shard": "shard_00014.bin",
+      "kept": 3128197,
+      "distinct": 2441941,
+      "dup_fraction": 0.25665519147291554,
+      "excess_fraction": 0.21937748805462065,
+      "positions_by_count": {
+        "1": 0.7433448085270844,
+        "2-9": 0.07638649356162672,
+        "10-99": 0.05840361077003782,
+        "100+": 0.12186508714125101
+      }
+    },
+    {
+      "shard": "shard_00015.bin",
+      "kept": 3125482,
+      "distinct": 2694908,
+      "dup_fraction": 0.17802598127264851,
+      "excess_fraction": 0.13776243152256196,
+      "positions_by_count": {
+        "1": 0.8219740187273515,
+        "2-9": 0.08540538707309785,
+        "10-99": 0.02790129650402722,
+        "100+": 0.06471929769552344
+      }
+    },
+    {
+      "shard": "shard_00016.bin",
+      "kept": 3145072,
+      "distinct": 2300132,
+      "dup_fraction": 0.31937043094720885,
+      "excess_fraction": 0.26865521679630866,
+      "positions_by_count": {
+        "1": 0.6806295690527912,
+        "2-9": 0.110265202195689,
+        "10-99": 0.06952559432661637,
+        "100+": 0.13957963442490348
+      }
+    },
+    {
+      "shard": "shard_00017.bin",
+      "kept": 1510397,
+      "distinct": 1176259,
+      "dup_fraction": 0.25581552399799523,
+      "excess_fraction": 0.22122528050572132,
+      "positions_by_count": {
+        "1": 0.7441844760020048,
+        "2-9": 0.07117797506218564,
+        "10-99": 0.058139681156676025,
+        "100+": 0.12649786777913358
+      }
+    }
+  ],
+  "top_repeated": [
+    {
+      "count_in_sample": 492,
+      "text": ";. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;. & nbsp ;."
+    },
+    {
+      "count_in_sample": 470,
+      "text": "des enfers entendant ces choses lui dit : Je vous conjure par vos vertus et par les miennes, ne me l ' amen ez pas. Car lorsque j ' ai appris la force de sa parole, j ' ai tremb lé très effrayé de crainte, et"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "eau du Jourdain. Et lorsqu ' il sera sorti de l ' eau du Jourdain, alors il oin dra de l ' huile de sa miséricorde tous ceux qui croiront en lui, et l ' huile de sa miséricorde sera pour la génération de ceux qui doivent"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "apparut disant : J ' ai été envoyé vers vous par le Seigneur, je suis établi sur le corps humain. Je vous dis, S eth : ne pr iez point Dieu dans les larmes et ne le suppl iez point à cause de l ' huile de"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "et ressus citer en même temps les corps des morts, et lui même venant sera baptisé dans l ' eau du Jourdain. Et lorsqu ' il sera sorti de l ' eau du Jourdain, alors il oin dra de l ' huile de sa miséricorde tous ceux"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "vous ne pourrez le recevoir en aucune façon, si ce n ' est dans les derniers jours et les derniers temps, si ce n ' est quand cinq mille et cinq cents ans auront été accomplis, alors le très tendre fils de Dieu viendra sur la terre"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "ce n ' est quand cinq mille et cinq cents ans auront été accomplis, alors le très tendre fils de Dieu viendra sur la terre ressus citer le corps humain d ' Adam, et ressus citer en même temps les corps des morts, et lui même venant"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "S eth s ' approchant des saints patri arches et des prophètes, dit : Moi S eth, comme j ' étais priant le Seigneur aux portes du paradis, voilà que l ' ange du Seigneur, Michel, m ' apparut disant : J ' ai été"
+    },
+    {
+      "count_in_sample": 468,
+      "text": "ne pourrez le recevoir en aucune façon, si ce n ' est dans les derniers jours et les derniers temps, si ce n ' est quand cinq mille et cinq cents ans auront été accomplis, alors le très tendre fils de Dieu viendra sur la terre ressus"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "ant comme des morts. Mais venez, allons vers eux avec tout honneur et modération, conduis ons - les vers nous. Et si nous les conjur ons, peut - être nous diront - ils quelques mystères touchant leur résurrection. Les Juifs entendant ces choses se"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "sur leurs langues avec leurs doigts. Et aussitôt ils parl èrent ainsi, disant : Donnez - nous à chacun des tomes de papier et nous vous écri rons tout ce que nous avons vu. Et ils leur donnèrent, et s ' asse yant ils écrivirent chacun"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "touchant leur résurrection. Les Juifs entendant ces choses se réjou irent tous grandement ; et An nas et Caï phas, Nicodème et Joseph, et Ga mal iel allant ne les trouvèrent pas dans leur sé pulcre, mais marchant dans la ville d ' Ari ma thie"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "; et An nas et Caï phas, Nicodème et Joseph, et Ga mal iel allant ne les trouvèrent pas dans leur sé pulcre, mais marchant dans la ville d ' Ari ma thie, ils les trouvèrent à genoux appliqués en oraison. Et les embrassant avec"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "trouvèrent à genoux appliqués en oraison. Et les embrassant avec toute vénération et crainte de Dieu ils les conduisirent à Jérusalem dans la syn agogue. Et ayant fermé les portes, prenant la loi du Seigneur et la mettant dans leurs mains, ils les conjur èrent par"
+    },
+    {
+      "count_in_sample": 464,
+      "text": ", prenant la loi du Seigneur et la mettant dans leurs mains, ils les conjur èrent par le Dieu Adon aï, et le Dieu d ' Israël, qui par la loi et les prophètes a parlé à nos pères, disant : Si vous croyez que c"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "corps, et trou blés du coeur ils gé mirent. Et regardant ensemble vers le ciel ils firent un signe de croix sur leurs langues avec leurs doigts. Et aussitôt ils parl èrent ainsi, disant : Donnez - nous à chacun des tomes de papier et nous"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "voilà qu ' ils sont dans la ville d ' Ari ma thie, vivant ensemble en or aisons. Quelques - uns les entendent criant, ne parlant cependant avec personne, mais se tais ant comme des morts. Mais venez, allons vers eux avec tout honneur"
+    },
+    {
+      "count_in_sample": 464,
+      "text": "a parlé à nos pères, disant : Si vous croyez que c ' est Jésus même qui vous a ressus cités des morts, dites - nous ce que vous avez vu, et comment vous êtes ressus cités des morts. Char inus et Lent hi us entendant"
+    },
+    {
+      "count_in_sample": 462,
+      "text": "contient : De la bouche de deux ou de trois témoins toute parole est assurée. Mais que disons - nous? Le bienheureux E no ch plut à Dieu et fut transporté par la parole de Dieu, et la sépulture du bienheureux Moyse ne se trouve pas."
+    },
+    {
+      "count_in_sample": 462,
+      "text": "nous? Le bienheureux E no ch plut à Dieu et fut transporté par la parole de Dieu, et la sépulture du bienheureux Moyse ne se trouve pas. Mais Jésus a été livré à Pilate, fla gel lé, couvert de cra chats, couronné d '"
+    }
+  ]
+}
