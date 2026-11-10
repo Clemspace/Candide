@@ -121,9 +121,13 @@ Chez BRIASSON.
 <!-- a comment that is not text -->
 <div1 n="2" id="0:3" vol="1">
 <index type="head" value="ABACO"/>
+<index type="shortauth" value="Diderot & d'Alembert"/>
+<index type="kafnum" value="39 & 2">
+<index type="kafauth" value="Diderot, Denis (1713-1784) & Alembert">
+<index type="normclass" value="Arithmétique"/>
 <head>ABACO</head>
 <p>ABACO, s. m. (<i>Arithm.</i>) mot italien. <ref target="x">Voyez</ref> <sc>Abaque</sc>.</p>
-<p>Second paragraph,
+<p>Second paragraph &ecirc; & suite,
 wrapped over two lines.</p>
 </div1>
 </body></text></TEI.2>
@@ -134,15 +138,20 @@ def test_encyclopedie_articles_outside_body_and_malformed(tmp_path):
     f = tmp_path / "ENC_volume01.xml"
     f.write_text(ENC_SAMPLE, encoding="utf-8")
     text, meta = EX.extract_articles_file(f)
-    assert meta == {"articles": 2, "div1_in_raw": 2, "articles_failed": 0}
+    rows = meta.pop("rows")
+    assert meta["articles"] == 2 and meta["div1_in_raw"] == 2
+    assert meta["articles_failed"] == 0 and meta["articles_empty"] == 0
+    assert meta["bare_amp_escaped"] == 1                    # the one in the text; attributes go with <index>
+    assert rows[1]["head"] == "ABACO" and rows[1]["shortauth"] == "Diderot & d'Alembert"
+    assert rows[1]["normclass"] == "Arithmétique" and rows[1]["chars"] > 0
     assert "Front matter" not in text                       # the <body> is not an article
     title, abaco = text.split("\n\nABACO\n\n")
     assert title.startswith("Title Page\n\nENCYCLOPÉDIE,\nDICTIONNAIRE RAISONNÉ\nDES SCIENCES.")
     assert "Mis en ordre & publié par M. DIDEROT, de l'Académie Royale." in title
     assert title.endswith("TOME PREMIER.\n\nA PARIS,\nChez BRIASSON.")   # unclosed <p> kept
     assert abaco == ("ABACO, s. m. (Arithm.) mot italien. Voyez Abaque.\n\n"
-                     "Second paragraph, wrapped over two lines.")
-    for noise in ("unsigned", "NA5", "comment", "Title Page\nTitle Page"):
+                     "Second paragraph ê & suite, wrapped over two lines.")
+    for noise in ("unsigned", "NA5", "comment", "Title Page\nTitle Page", "kafauth", "1713"):
         assert noise not in text
 
 
@@ -155,4 +164,7 @@ def test_encyclopedie_uses_article_mode(tmp_path, monkeypatch):
     stats = EX.process_subcorpus("encyclopedie", EX.SUBCORPORA["encyclopedie"])
     assert stats["files_extracted"] == 1 and stats["articles"] == 2 and stats["div1_in_raw"] == 2
     out = (tmp_path / "out" / "encyclopedie" / "ENC_volume01.txt").read_text(encoding="utf-8")
+    table = (tmp_path / "out" / "encyclopedie" / "ENC_volume01.articles.tsv").read_text(encoding="utf-8")
+    assert table.splitlines()[0].split("\t") == list(EX.ARTICLE_FIELDS) + ["chars"]
+    assert len(table.splitlines()) == 3
     assert out.startswith("Title Page") and out.endswith("wrapped over two lines.")

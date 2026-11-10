@@ -24,7 +24,9 @@ Fixes of 2026-11-10 (v1 text was affected by all three):
 import sys
 import re
 import json
+import csv
 import hashlib
+import html
 import argparse
 import logging
 from pathlib import Path
@@ -264,6 +266,14 @@ def extract_file(filepath: Path, subcorpus: str) -> tuple[str, dict]:
 # well formed (unclosed or nested <p>). Each <div1> is cut from the raw bytes
 # and parsed on its own, so an error stays inside one article. The headword
 # and the cross-references (<ref>, "Voyez ...") are kept: they are text.
+#
+# Source errors handled before parsing (found 2026-11-10 on ENC_volume01):
+#   - <index type="kafnum" ...> and <index type="kafauth" ...> are not closed,
+#     so a parser nests the whole article inside them (78% of the articles of
+#     volume 1 came out empty). All <index> tags are metadata in attributes:
+#     they are read into the article table, then removed from the text.
+#   - bare "&" (e.g. "Diderot & d'Alembert"): escaped;
+#   - HTML named entities (&ecirc;, &tilde;): mapped to their characters.
 
 DIV1_START = re.compile(rb"<div1[\s>]")
 ARTICLE_DROP = frozenset({"index", "pb", "milestone", "fw", "graphic", "figure", "figdesc",
@@ -272,6 +282,38 @@ ARTICLE_BLOCKS = frozenset({"p", "head", "blockquote", "table", "row", "center",
                             "item", "lg", "l", "div1", "div2", "div3", "hd"})
 ARTICLE_BREAKS = frozenset({"br", "lb"})
 _PARA, _LINE = "\x00", "\x01"
+
+
+INDEX_TAG = re.compile(r"<index\b[^<>]*>|</index\s*>")
+INDEX_ATTRS = re.compile(r'<index\s+type="([^"]*)"\s+value="([^"]*)"')
+NAMED_ENTITY = re.compile(r"&([A-Za-z][A-Za-z0-9]*);")
+BARE_AMP = re.compile(r"&(?!(?:#[0-9]+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]*);)")
+XML_ENTITIES = frozenset({"amp", "lt", "gt", "quot", "apos"})
+ARTICLE_FIELDS = ("head", "objecttype", "shortauth", "attribution", "normclass", "pos")
+
+
+def _named_entity(m) -> str:
+    name = m.group(1)
+    if name in XML_ENTITIES:
+        return m.group(0)
+    ch = html.entities.html5.get(name + ";")
+    if ch is None:
+        return m.group(0)
+    return ch.replace("&", "&amp;").replace("<", "&lt;")
+
+
+def clean_article_chunk(chunk: bytes, counts: dict) -> tuple:
+    """(cleaned chunk, its <index> metadata); counts the fixes made."""
+    text = chunk.decode("utf-8", errors="replace")
+    meta = {}
+    for k, v in INDEX_ATTRS.findall(text):
+        meta.setdefault(k, html.unescape(v))
+    text, n = INDEX_TAG.subn("", text)
+    counts["index_tags_removed"] = counts.get("index_tags_removed", 0) + n
+    text, n = NAMED_ENTITY.subn(lambda m: _named_entity(m), text)
+    text, n = BARE_AMP.subn("&amp;", text)
+    counts["bare_amp_escaped"] = counts.get("bare_amp_escaped", 0) + n
+    return text.encode("utf-8"), meta
 
 
 def article_chunks(raw: bytes):
@@ -318,12 +360,16 @@ def block_text(root) -> str:
 
 
 def extract_articles_file(filepath: Path) -> tuple:
-    """All <div1> articles of a file, one block each, separated by blank lines."""
+    """
+    All <div1> articles of a file, one block each, separated by blank lines.
+    meta["rows"] holds one row per article (ARTICLE_FIELDS from <index>, plus chars).
+    """
     raw = filepath.read_bytes()
-    parser = etree.XMLParser(recover=True, huge_tree=True, encoding="utf-8")
-    texts, n_raw, failed = [], 0, 0
+    texts, rows, n_raw, failed, empty, counts = [], [], 0, 0, 0, {}
     for chunk in article_chunks(raw):
         n_raw += 1
+        chunk, info = clean_article_chunk(chunk, counts)
+        parser = etree.XMLParser(recover=True, huge_tree=True, encoding="utf-8")
         try:
             root = etree.fromstring(b"<wrapper>" + chunk + b"</wrapper>", parser)
         except etree.XMLSyntaxError:
@@ -332,9 +378,14 @@ def extract_articles_file(filepath: Path) -> tuple:
             failed += 1
             continue
         t = block_text(root)
-        if t:
-            texts.append(t)
-    return "\n\n".join(texts), {"articles": len(texts), "div1_in_raw": n_raw, "articles_failed": failed}
+        if not t:
+            empty += 1
+            continue
+        texts.append(t)
+        rows.append({**{f: info.get(f, "") for f in ARTICLE_FIELDS}, "chars": len(t)})
+    meta = {"articles": len(texts), "div1_in_raw": n_raw, "articles_failed": failed,
+            "articles_empty": empty, **counts, "rows": rows}
+    return "\n\n".join(texts), meta
 
 
 # ── File discovery ──────────────────────────────────────────────────────────
@@ -382,8 +433,9 @@ def process_subcorpus(name: str, config: dict, dry_run: bool = False,
         try:
             if config.get("mode") == "articles":
                 text, meta = extract_articles_file(fpath)
-                for k in ("articles", "div1_in_raw", "articles_failed"):
-                    stats[k] += meta[k]
+                for k, v in meta.items():
+                    if k != "rows":
+                        stats[k] += v
             else:
                 text, meta = extract_file(fpath, name)
         except Exception as e:
@@ -425,6 +477,11 @@ def process_subcorpus(name: str, config: dict, dry_run: bool = False,
                 out_path = out_dir / out_name
 
         out_path.write_text(text, encoding="utf-8")
+        if meta.get("rows"):            # article table next to the text (not read by the shard tools)
+            with open(out_path.with_suffix(".articles.tsv"), "w", newline="", encoding="utf-8") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(meta["rows"][0]), delimiter="\t")
+                w.writeheader()
+                w.writerows(meta["rows"])
 
     return dict(stats)
 
