@@ -145,6 +145,7 @@ def main():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default="memorization_probe.json")
     args = p.parse_args()
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)   # fail-safe before long work
 
     import torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

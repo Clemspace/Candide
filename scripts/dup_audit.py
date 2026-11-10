@@ -126,10 +126,13 @@ def main():
     p.add_argument("--tokenizer", default=None, help="tokenizer.json, to print repeated text")
     p.add_argument("--out", default="dup_audit.json")
     args = p.parse_args()
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)   # fail-safe before long work
 
     root = Path(args.shards)
     train = sorted((root / "train").glob("shard_*.bin"))
     val = sorted((root / "val").glob("shard_*.bin"))
+    if not train:
+        raise SystemExit(f"no train shards in {root / 'train'} (not built or not copied yet)")
     t0 = time.time()
 
     per_shard, train_hashes = [], []
