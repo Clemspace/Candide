@@ -62,7 +62,7 @@ from .trainer import (
     CheckpointCallback,
     ProgressCallback,
     MetricsSaverCallback,
-    SparsityTrackerCallback
+    SparsityTrackerCallback,
 )
 
 

@@ -32,6 +32,12 @@ from .attention import (
     get_attention,
 )
 
+from .modern_attention import (
+    FlashGQA,
+    LocalAttention,
+    GlobalAttention,
+)
+
 __all__ = [
     # Base classes
     'BaseNormalization',
@@ -59,4 +65,9 @@ __all__ = [
     'MultiHeadAttention',
     'GroupedQueryAttention',
     'get_attention',
+    
+    # Modern attention
+    'FlashGQA',
+    'LocalAttention',
+    'GlobalAttention',
 ]
