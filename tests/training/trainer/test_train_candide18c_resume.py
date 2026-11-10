@@ -146,6 +146,17 @@ def test_retention_during_training(tmp_path):
     assert names == ["final.pt", "step_2.pt", "step_5.pt", "step_6.pt"]
 
 
+def test_non_finite_loss_stops_before_any_checkpoint(tmp_path, monkeypatch):
+    """A diverged run must raise at the first logged non-finite loss and write no checkpoint."""
+    _shards(tmp_path / "main", 0)
+    cfg = _cfg(tmp_path, "nan", max_steps=6, dropout=0.0)      # log_every=1, save_every=3
+    monkeypatch.setattr(script, "lr_factor", lambda step, t: float("nan"))   # NaN weights after step 1
+    with pytest.raises(FloatingPointError):
+        script.train(cfg)
+    ckpts = tmp_path / "nan" / "checkpoints"
+    assert not ckpts.exists() or not any(ckpts.iterdir())
+
+
 def test_muon_groups_cover_every_parameter_once():
     cfg = script.FullConfig()
     model = script.setup_model(script.ModelConfig(vocab_size=VOCAB, d_model=64, n_layers=2, n_heads=4,

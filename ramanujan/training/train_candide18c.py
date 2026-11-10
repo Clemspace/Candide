@@ -749,6 +749,13 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
             tps = tokens_per_step * cfg.training.log_every / elapsed
 
             avg_loss = float(running_loss) / cfg.training.log_every
+            # Divergence guard. Checked where the loss is already synchronised, and before
+            # the checkpoint block below, so a diverged run stops with its last good
+            # checkpoints intact instead of running to the end and overwriting them.
+            if not (math.isfinite(avg_loss) and math.isfinite(float(grad_norm))):
+                log.error(f"step {global_step}: non-finite loss ({avg_loss}) or gradient norm "
+                          f"({float(grad_norm)}); stopping without saving")
+                raise FloatingPointError(f"training diverged at step {global_step}")
             ppl = math.exp(min(avg_loss, 20))
 
             log.info(
@@ -784,6 +791,9 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
 
         # Checkpoint
         if global_step % cfg.training.save_every == 0:
+            if not math.isfinite(float(step_loss)):     # save_every need not be a multiple of log_every
+                log.error(f"step {global_step}: non-finite loss; stopping without saving")
+                raise FloatingPointError(f"training diverged at step {global_step}")
             checkpoint()
             for f in prune_checkpoints(cfg.logging.output_dir, cfg.training.keep_last,
                                        cfg.training.keep_steps):
@@ -835,9 +845,17 @@ def main():
     parser.add_argument("--compile", action="store_true", help="torch.compile the model")
     parser.add_argument("--micro-batch", type=int, default=None,
                         help="per-step micro-batch; gradient accumulation is rescaled to keep tokens/step")
+    parser.add_argument("--n-layers", type=int, default=None, help="override model.n_layers (shape checks)")
+    parser.add_argument("--eval-every", type=int, default=None,
+                        help="override training.eval_every (each evaluation reads every validation set)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+
+    if args.n_layers is not None:
+        cfg.model.n_layers = args.n_layers
+    if args.eval_every is not None:
+        cfg.training.eval_every = args.eval_every
 
     if args.lr is not None:
         cfg.training.min_lr = cfg.training.min_lr * (args.lr / cfg.training.learning_rate)
