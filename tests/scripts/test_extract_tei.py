@@ -88,3 +88,71 @@ def test_manifest_from_dir(tmp_path):
     rows = MF.build(tmp_path, "encyclopedie", ["ENC_volume17"])
     assert [(Path(r["path"]).stem, r["split"], r["decision"]) for r in rows] == \
         [("ENC_volume01", "train", "keep"), ("ENC_volume17", "val", "keep")]
+
+
+ENC_SAMPLE = """<?xml version="1.0" encoding="UTF-8"?>
+<TEI.2><teiHeader><fileDesc><titleStmt><title>Encyclopédie, tome 1</title></titleStmt></fileDesc></teiHeader>
+<text><body><p>Front matter.</p></body></text></TEI.2>
+<div1 n="1" id="0:2" vol="1">
+<index type="head" value="Title Page"/>
+<index type="author" value="unsigned"/>
+<milestone unit="volume" n="1"/>
+<pb n="1:NA5" facs="V1/ENC_1-NA5.jpeg"/>
+<head>Title Page</head>
+<p>
+<center>
+<b><i>ENCYCLOPÉDIE</i>,<br/>
+DICTIONNAIRE RAISONNÉ<br/>
+DES SCIENCES</b>.
+</center>
+</p>
+<p><hd>
+Mis en ordre &amp; publié par M. <i>DIDEROT</i>,
+de l'Académie Royale.
+</hd>
+</p>
+<p>
+<center>TOME PREMIER.</center>
+<gap type="image"/>
+<p>
+A PARIS,<br/>
+Chez BRIASSON.
+</div1>
+<!-- a comment that is not text -->
+<div1 n="2" id="0:3" vol="1">
+<index type="head" value="ABACO"/>
+<head>ABACO</head>
+<p>ABACO, s. m. (<i>Arithm.</i>) mot italien. <ref target="x">Voyez</ref> <sc>Abaque</sc>.</p>
+<p>Second paragraph,
+wrapped over two lines.</p>
+</div1>
+</body></text></TEI.2>
+"""
+
+
+def test_encyclopedie_articles_outside_body_and_malformed(tmp_path):
+    f = tmp_path / "ENC_volume01.xml"
+    f.write_text(ENC_SAMPLE, encoding="utf-8")
+    text, meta = EX.extract_articles_file(f)
+    assert meta == {"articles": 2, "div1_in_raw": 2, "articles_failed": 0}
+    assert "Front matter" not in text                       # the <body> is not an article
+    title, abaco = text.split("\n\nABACO\n\n")
+    assert title.startswith("Title Page\n\nENCYCLOPÉDIE,\nDICTIONNAIRE RAISONNÉ\nDES SCIENCES.")
+    assert "Mis en ordre & publié par M. DIDEROT, de l'Académie Royale." in title
+    assert title.endswith("TOME PREMIER.\n\nA PARIS,\nChez BRIASSON.")   # unclosed <p> kept
+    assert abaco == ("ABACO, s. m. (Arithm.) mot italien. Voyez Abaque.\n\n"
+                     "Second paragraph, wrapped over two lines.")
+    for noise in ("unsigned", "NA5", "comment", "Title Page\nTitle Page"):
+        assert noise not in text
+
+
+def test_encyclopedie_uses_article_mode(tmp_path, monkeypatch):
+    src = tmp_path / "corpora" / "encyclopedie"
+    src.mkdir(parents=True)
+    (src / "ENC_volume01.xml").write_text(ENC_SAMPLE, encoding="utf-8")
+    monkeypatch.setattr(EX, "BASE_DIR", tmp_path / "corpora")
+    monkeypatch.setattr(EX, "OUT_DIR", tmp_path / "out")
+    stats = EX.process_subcorpus("encyclopedie", EX.SUBCORPORA["encyclopedie"])
+    assert stats["files_extracted"] == 1 and stats["articles"] == 2 and stats["div1_in_raw"] == 2
+    out = (tmp_path / "out" / "encyclopedie" / "ENC_volume01.txt").read_text(encoding="utf-8")
+    assert out.startswith("Title Page") and out.endswith("wrapped over two lines.")

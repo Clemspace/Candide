@@ -50,7 +50,8 @@ SUBCORPORA = {
     # Diderot & d'Alembert, 17 text volumes (ARTFL). Kept out of the main corpus
     # selection; used as its own shard set (base mix and high-quality cooldown).
     # Encyclopediana is a different work and is not matched by the pattern.
-    "encyclopedie":     {"extensions": [".xml"], "recursive": False, "pattern": "ENC_volume*.xml"},
+    "encyclopedie":     {"extensions": [".xml"], "recursive": False, "pattern": "ENC_volume*.xml",
+                         "mode": "articles"},
 }
 
 SKIP_FILES = {"files2move.txt", "load_press_config.py", "nohup.out", "exclude.txt",
@@ -256,6 +257,86 @@ def extract_file(filepath: Path, subcorpus: str) -> tuple[str, dict]:
     return "\n\n".join(paragraphs), meta
 
 
+# ── Article-level extraction (Encyclopédie, ARTFL encoding) ───────────────────
+#
+# Each article is a <div1> (with <index> metadata, <head> = headword, <p> text);
+# the articles sit outside the file's <body>, and the markup is not always
+# well formed (unclosed or nested <p>). Each <div1> is cut from the raw bytes
+# and parsed on its own, so an error stays inside one article. The headword
+# and the cross-references (<ref>, "Voyez ...") are kept: they are text.
+
+DIV1_START = re.compile(rb"<div1[\s>]")
+ARTICLE_DROP = frozenset({"index", "pb", "milestone", "fw", "graphic", "figure", "figdesc",
+                          "gap"}) | HEADER_TAGS
+ARTICLE_BLOCKS = frozenset({"p", "head", "blockquote", "table", "row", "center", "list",
+                            "item", "lg", "l", "div1", "div2", "div3", "hd"})
+ARTICLE_BREAKS = frozenset({"br", "lb"})
+_PARA, _LINE = "\x00", "\x01"
+
+
+def article_chunks(raw: bytes):
+    """Raw bytes of each <div1> article, cut at the next <div1> and after its last </div1>."""
+    starts = [m.start() for m in DIV1_START.finditer(raw)]
+    for a, b in zip(starts, starts[1:] + [len(raw)]):
+        chunk = raw[a:b]
+        end = chunk.rfind(b"</div1>")
+        yield chunk[: end + len(b"</div1>")] if end >= 0 else chunk
+
+
+def block_text(root) -> str:
+    """
+    Text of an element tree: a blank line between block elements, a newline at
+    <br>, every other whitespace run collapsed to one space (the source wraps
+    lines inside paragraphs). Dropped elements lose their content, never their tail.
+    """
+    parts = []
+    stack = [(root, True)]
+    while stack:
+        e, visit = stack.pop()
+        tag = local_tag(e)
+        if not visit:
+            if tag in ARTICLE_BLOCKS:
+                parts.append(_PARA)
+            elif tag in ARTICLE_BREAKS:
+                parts.append(_LINE)
+            if e.tail:
+                parts.append(e.tail)
+            continue
+        if not isinstance(e.tag, str) or tag in ARTICLE_DROP:   # comments, PIs, metadata
+            continue
+        if tag in ARTICLE_BLOCKS:
+            parts.append(_PARA)
+        if e.text:
+            parts.append(e.text)
+        for c in reversed(list(e)):
+            stack.append((c, False))
+            stack.append((c, True))
+    text = re.sub(r"\s+", " ", "".join(parts))
+    text = re.sub(r" *\x01 *", "\n", text)
+    text = re.sub(r"[ \n]*\x00[\x00 \n]*", "\n\n", text)
+    return text.strip()
+
+
+def extract_articles_file(filepath: Path) -> tuple:
+    """All <div1> articles of a file, one block each, separated by blank lines."""
+    raw = filepath.read_bytes()
+    parser = etree.XMLParser(recover=True, huge_tree=True, encoding="utf-8")
+    texts, n_raw, failed = [], 0, 0
+    for chunk in article_chunks(raw):
+        n_raw += 1
+        try:
+            root = etree.fromstring(b"<wrapper>" + chunk + b"</wrapper>", parser)
+        except etree.XMLSyntaxError:
+            root = None
+        if root is None:
+            failed += 1
+            continue
+        t = block_text(root)
+        if t:
+            texts.append(t)
+    return "\n\n".join(texts), {"articles": len(texts), "div1_in_raw": n_raw, "articles_failed": failed}
+
+
 # ── File discovery ──────────────────────────────────────────────────────────
 
 def find_files(src_dir: Path, extensions: list[str], recursive: bool, pattern: str = None) -> list[Path]:
@@ -299,7 +380,12 @@ def process_subcorpus(name: str, config: dict, dry_run: bool = False,
             log.info(f"    [{i+1:,}/{len(files):,}]")
 
         try:
-            text, meta = extract_file(fpath, name)
+            if config.get("mode") == "articles":
+                text, meta = extract_articles_file(fpath)
+                for k in ("articles", "div1_in_raw", "articles_failed"):
+                    stats[k] += meta[k]
+            else:
+                text, meta = extract_file(fpath, name)
         except Exception as e:
             log.debug(f"  Error {fpath.name}: {e}")
             stats["files_error"] += 1

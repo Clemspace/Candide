@@ -12,8 +12,14 @@ Usage:
     # Full run with wandb
     python train_candide18c.py --config configs/candide18c.yaml --wandb
 
-    # Resume
+    # Resume (exact: same data order, RNG, scaler, W&B run); "auto" = latest step_*.pt of the run
     python train_candide18c.py --config configs/candide18c.yaml --resume checkpoints/step_5000.pt --wandb
+    python train_candide18c.py --config configs/candide18c.yaml --resume auto --wandb
+
+    # WSD cooldown branched off a stable-phase checkpoint (scaling-law points)
+    python train_candide18c.py --config configs/full.yaml --schedule wsd \
+        --resume runs/full/checkpoints/step_20000.pt --cooldown-start 20000 --max-steps 24000 \
+        --output-dir runs/full-cool20k --run-name full-cool20k
 
     # Pilot sweep arm (overrides for LR / seed / budget / naming)
     python train_candide18c.py --config configs/pilot/angpt.yaml --wandb \
@@ -24,7 +30,7 @@ import argparse
 import logging
 import math
 import os
-import sys
+import re
 import time
 from pathlib import Path
 
@@ -90,6 +96,14 @@ class TrainingConfig:
     save_every: int = 1000
     log_every: int = 10
     seed: int = 42
+    # LR schedule (ramanujan/training/schedules.py). "cosine" = the pilot runs.
+    # "wsd": warmup, constant peak, then a cooldown over the last cooldown_frac
+    # of the steps (or from cooldown_start) to final_lr_ratio * peak.
+    schedule: str = "cosine"
+    cooldown_frac: float = 0.2
+    cooldown_shape: str = "1-sqrt"
+    final_lr_ratio: float = 0.0
+    cooldown_start: Optional[int] = None
 
 @dataclass
 class DataConfig:
@@ -105,6 +119,15 @@ class DataConfig:
     # Fixed random validation sample, identical for every run (None = legacy stream).
     val_windows: Optional[int] = 1600
     val_seed: int = 0
+    # Mixtures (None = shards_dir/train alone, as in the pilots).
+    # sources: name -> root dir with train/ shards; "main" defaults to shards_dir.
+    # mix: weights of the stable phase; cooldown_mix: weights from the start of
+    # the WSD cooldown (None = keep mix). Validation stays shards_dir/val.
+    sources: Optional[dict] = None
+    mix: Optional[dict] = None
+    cooldown_mix: Optional[dict] = None
+    # name -> root dir with val/ shards, each scored on its own fixed sample
+    extra_val: Optional[dict] = None
 
 @dataclass
 class LoggingConfig:
@@ -147,9 +170,22 @@ def load_config(path: str) -> FullConfig:
 
 # ── Data ──────────────────────────────────────────────────────────────────────
 
-# Import the shard loader (place shard_loader.py in same dir or adjust path)
-sys.path.insert(0, str(Path(__file__).parent))
-from shard_loader import ShardLoader
+from ramanujan.data.loaders.shard_loader import FixedWindowDataset, ShardLoader  # noqa: E402
+from ramanujan.training.schedules import lr_multiplier  # noqa: E402
+
+
+def resolve_sources(cfg: "DataConfig") -> dict:
+    """Mixture sources, with "main" = shards_dir unless given explicitly."""
+    sources = dict(cfg.sources or {})
+    sources.setdefault("main", cfg.shards_dir)
+    return sources
+
+
+def phase_mix(cfg: "DataConfig", phase: int) -> Optional[dict]:
+    """Mixture weights of a phase (0 stable, 1 cooldown); None = single shard set."""
+    if phase == 1 and cfg.cooldown_mix:
+        return cfg.cooldown_mix
+    return cfg.mix
 
 
 # ── Model ─────────────────────────────────────────────────────────────────────
@@ -260,22 +296,40 @@ def setup_optimizer(model: nn.Module, cfg: TrainingConfig, arch: str = "gpt"):
     return optimizer
 
 
-def cosine_lr(step: int, cfg: TrainingConfig) -> float:
-    if step < cfg.warmup_steps:
-        return step / max(1, cfg.warmup_steps)
-    progress = (step - cfg.warmup_steps) / max(1, cfg.training_max_steps - cfg.warmup_steps)
-    ratio = cfg.min_lr / cfg.learning_rate
-    return ratio + 0.5 * (1 - ratio) * (1 + math.cos(math.pi * progress))
+def cooldown_start_step(cfg: TrainingConfig) -> Optional[int]:
+    """First step of the WSD cooldown (None for cosine); same rule as lr_multiplier."""
+    if cfg.schedule != "wsd":
+        return None
+    start = cfg.cooldown_start
+    if start is None:
+        start = cfg.max_steps - int(round(cfg.cooldown_frac * cfg.max_steps))
+    return max(start, cfg.warmup_steps)
+
+
+def lr_factor(step: int, cfg: TrainingConfig) -> float:
+    """Multiplier of the peak LR at `step` (cosine floor min_lr, WSD floor final_lr_ratio)."""
+    return lr_multiplier(step, cfg.max_steps, cfg.warmup_steps, schedule=cfg.schedule,
+                         min_ratio=cfg.min_lr / cfg.learning_rate,
+                         cooldown_shape=cfg.cooldown_shape, final_ratio=cfg.final_lr_ratio,
+                         cooldown_start=cooldown_start_step(cfg))
+
+
+def phase_at(step: int, cfg: FullConfig) -> int:
+    """Data phase at `step`: 1 from the WSD cooldown start when a cooldown mix is set."""
+    cs = cooldown_start_step(cfg.training)
+    return int(cs is not None and bool(cfg.data.cooldown_mix) and step >= cs)
 
 
 # ── WandB ─────────────────────────────────────────────────────────────────────
 
-def setup_wandb(cfg: FullConfig, model: nn.Module):
+def setup_wandb(cfg: FullConfig, model: nn.Module, run_id: Optional[str] = None):
     if not cfg.logging.use_wandb:
         return None
     try:
         import wandb
         run = wandb.init(
+            id=run_id,                                   # resume: continue the same W&B run
+            resume="allow" if run_id else None,
             project=cfg.logging.wandb_project,
             entity=cfg.logging.wandb_entity,
             name=cfg.logging.wandb_run_name,
@@ -303,28 +357,61 @@ def log_metrics(wandb_run, step: int, metrics: dict):
 
 # ── Checkpointing ─────────────────────────────────────────────────────────────
 
-def save_checkpoint(model, optimizer, scheduler_step, step, cfg, tag=""):
+def save_checkpoint(model, optimizer, scheduler_step, step, cfg, tag="", extra: Optional[dict] = None):
+    """
+    Model, optimizer, step and config, plus `extra` (scaler, RNG states, W&B id)
+    for an exact resume. Written to a temporary file then renamed, so a crash
+    while saving never leaves a truncated checkpoint.
+    """
     out_dir = Path(cfg.logging.output_dir) / "checkpoints"
     out_dir.mkdir(parents=True, exist_ok=True)
     name = f"step_{step}{tag}.pt" if not tag else f"{tag}.pt"
     path = out_dir / name
+    tmp = path.with_suffix(".pt.tmp")
     torch.save({
         "model":     model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "step":      step,
         "config":    cfg.__dict__,
-    }, path)
+        **(extra or {}),
+    }, tmp)
+    os.replace(tmp, path)
     log.info(f"Checkpoint saved: {path}")
     return path
 
 
-def load_checkpoint(path, model, optimizer):
-    ckpt = torch.load(path, map_location="cpu")
+def load_checkpoint(path, model, optimizer) -> tuple:
+    """Restore model and optimizer; returns (step, full checkpoint dict)."""
+    ckpt = torch.load(path, map_location="cpu", weights_only=False)
     model.load_state_dict(ckpt["model"])
     optimizer.load_state_dict(ckpt["optimizer"])
     step = ckpt.get("step", 0)
     log.info(f"Resumed from step {step}: {path}")
-    return step
+    return step, ckpt
+
+
+def latest_checkpoint(output_dir: str) -> Optional[Path]:
+    """The step_N.pt with the largest N in output_dir/checkpoints (None if there is none)."""
+    found = []
+    for f in (Path(output_dir) / "checkpoints").glob("step_*.pt"):
+        m = re.fullmatch(r"step_(\d+)\.pt", f.name)
+        if m:
+            found.append((int(m.group(1)), f))
+    return max(found)[1] if found else None
+
+
+def rng_state() -> dict:
+    state = {"torch_rng": torch.get_rng_state()}
+    if torch.cuda.is_available():
+        state["cuda_rng"] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def set_rng_state(ckpt: dict):
+    if "torch_rng" in ckpt:
+        torch.set_rng_state(ckpt["torch_rng"])
+    if "cuda_rng" in ckpt and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(ckpt["cuda_rng"])
 
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
@@ -361,6 +448,45 @@ def evaluate(model, val_loader, device, n_steps: Optional[int], scaler_ctx) -> d
     }
 
 
+def source_windows(cfg: FullConfig, names) -> dict:
+    """Training windows available in each named source (from shard headers only)."""
+    from ramanujan.data.loaders.shard_loader import read_shard_header, windows_per_shard
+    sources = resolve_sources(cfg.data)
+    out = {}
+    for n in names:
+        shards = sorted((Path(sources[n]) / "train").glob("shard_*.bin"))
+        out[n] = sum(windows_per_shard(read_shard_header(f)["n_tokens"], cfg.data.sequence_length)
+                     for f in shards)
+    return out
+
+
+def mixture_passes(cfg: FullConfig, windows: dict, tokens_per_step: int,
+                   cooldown_start: Optional[int]) -> dict:
+    """Expected passes over each source in each phase: windows drawn / windows available."""
+    steps = {0: cfg.training.max_steps}
+    if cfg.data.cooldown_mix and cooldown_start is not None:
+        steps = {0: cooldown_start, 1: cfg.training.max_steps - cooldown_start}
+    per_step = tokens_per_step // cfg.data.sequence_length
+    out = {}
+    for ph, n_steps in steps.items():
+        mix = {n: w for n, w in phase_mix(cfg.data, ph).items() if w > 0}
+        total = sum(mix.values())
+        out[ph] = {n: w / total * n_steps * per_step / max(1, windows[n]) for n, w in mix.items()}
+    return out
+
+
+def log_mixture_passes(cfg: FullConfig, tokens_per_step: int, cooldown_start: Optional[int]):
+    if not cfg.data.mix:
+        return
+    try:
+        names = set(cfg.data.mix) | set(cfg.data.cooldown_mix or {})
+        passes = mixture_passes(cfg, source_windows(cfg, names), tokens_per_step, cooldown_start)
+        for ph, per in passes.items():
+            log.info(f"Phase {ph} expected passes: " + ", ".join(f"{n} {x:.2f}x" for n, x in per.items()))
+    except Exception as e:  # informative only: never block a run
+        log.warning(f"could not compute mixture passes: {e}")
+
+
 # ── Training Loop ─────────────────────────────────────────────────────────────
 
 def train(cfg: FullConfig, resume: Optional[str] = None):
@@ -368,24 +494,37 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f"Device: {device}")
 
-    # Data
-    log.info("Setting up data loaders...")
-    loader = ShardLoader(
-        data_dir=cfg.data.shards_dir,
-        seq_len=cfg.data.sequence_length,
-        batch_size=cfg.training.batch_size,
-        num_workers=cfg.data.num_workers,
-        prefetch_factor=cfg.data.prefetch_factor,
-        pin_memory=cfg.data.pin_memory,
-        seed=cfg.training.seed,
-        train_order=cfg.data.train_order,
-        val_windows=cfg.data.val_windows,
-        val_seed=cfg.data.val_seed,
-    )
-    train_loader, val_loader = loader.get_dataloaders()
-    # Fixed sample: every evaluation reads all of it. Legacy stream: capped.
-    eval_periodic = None if cfg.data.val_windows else cfg.training.eval_steps
-    eval_final = None if cfg.data.val_windows else cfg.training.eval_steps * 4
+    accum = cfg.training.gradient_accumulation_steps
+    cooldown_start = cooldown_start_step(cfg.training)
+    if cfg.data.cooldown_mix and cooldown_start is None:
+        raise ValueError("data.cooldown_mix needs training.schedule: wsd")
+    if cfg.data.mix or cfg.data.cooldown_mix:
+        known = resolve_sources(cfg.data)
+        bad = [n for n in {**(cfg.data.mix or {}), **(cfg.data.cooldown_mix or {})} if n not in known]
+        if bad:
+            raise ValueError(f"mix names unknown sources {bad}; data.sources has {list(known)}")
+        if cfg.data.cooldown_mix and not cfg.data.mix:
+            raise ValueError("data.cooldown_mix needs data.mix for the stable phase (e.g. {main: 1.0})")
+
+    def make_loader(phase: int, start_batch: int):
+        """Loaders of a data phase, resumed after start_batch micro-batches of that phase."""
+        mix = phase_mix(cfg.data, phase)
+        return ShardLoader(
+            data_dir=cfg.data.shards_dir,
+            seq_len=cfg.data.sequence_length,
+            batch_size=cfg.training.batch_size,
+            num_workers=cfg.data.num_workers,
+            prefetch_factor=cfg.data.prefetch_factor,
+            pin_memory=cfg.data.pin_memory,
+            seed=cfg.training.seed,
+            train_order=cfg.data.train_order,
+            val_windows=cfg.data.val_windows,
+            val_seed=cfg.data.val_seed,
+            train_sources=resolve_sources(cfg.data) if mix else None,
+            train_mix=mix,
+            phase=phase,
+            start_batch=start_batch,
+        )
 
     # Model
     log.info("Building model...")
@@ -395,20 +534,59 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
     optimizer = setup_optimizer(model, cfg.training, arch=cfg.model.arch)
     projects = hasattr(model, "project_parameters")
 
-    # Resume
-    global_step = 0
-    if resume:
-        global_step = load_checkpoint(resume, model, optimizer)
-    if projects:
-        model.project_parameters()   # weight rows into the unit ball before step 0
-
     # Mixed precision
     dtype = torch.bfloat16 if cfg.training.mixed_precision == "bf16" else torch.float16
     scaler = torch.cuda.amp.GradScaler(enabled=(dtype == torch.float16))
     autocast_ctx = torch.cuda.amp.autocast(dtype=dtype, enabled=(device.type == "cuda"))
 
+    # Resume: weights, optimizer, scaler, RNG; the data position follows from the step
+    global_step, ckpt = 0, {}
+    if resume:
+        global_step, ckpt = load_checkpoint(resume, model, optimizer)
+        if "scaler" in ckpt:
+            scaler.load_state_dict(ckpt["scaler"])
+        set_rng_state(ckpt)
+        if "rng_after_init" not in ckpt and global_step > 0:
+            log.warning("checkpoint without RNG state (older run): dropout draws will differ")
+    if projects:
+        model.project_parameters()   # weight rows into the unit ball before step 0
+
+    start_step = global_step
+
+    # Data
+    log.info("Setting up data loaders...")
+    phase = phase_at(global_step, cfg)
+    phase_start = cooldown_start if phase == 1 else 0
+    loader = make_loader(phase, (global_step - phase_start) * accum)
+    train_loader, val_loader = loader.get_dataloaders()
+    # Fixed sample: every evaluation reads all of it. Legacy stream: capped.
+    eval_periodic = None if cfg.data.val_windows else cfg.training.eval_steps
+    eval_final = None if cfg.data.val_windows else cfg.training.eval_steps * 4
+    extra_val = {}
+    for name, root in (cfg.data.extra_val or {}).items():
+        ds = FixedWindowDataset(Path(root) / "val", cfg.data.sequence_length,
+                                cfg.data.val_windows or 1600, cfg.data.val_seed)
+        extra_val[name] = torch.utils.data.DataLoader(
+            ds, batch_size=cfg.training.batch_size, shuffle=False,
+            generator=torch.Generator().manual_seed(cfg.data.val_seed))
+
+    def evaluate_all(n_steps):
+        metrics = evaluate(model, val_loader, device, n_steps, autocast_ctx)
+        for name, vl in extra_val.items():
+            m = evaluate(model, vl, device, None, autocast_ctx)
+            metrics.update({k.replace("val/", f"val_{name}/"): v for k, v in m.items()})
+        return metrics
+
     # WandB
-    wandb_run = setup_wandb(cfg, model)
+    wandb_run = setup_wandb(cfg, model, run_id=ckpt.get("wandb_id"))
+
+    def checkpoint(tag=""):
+        extra = {"scaler": scaler.state_dict(), "rng_after_init": True, **rng_state(),
+                 "phase": phase, "schedule": cfg.training.schedule,
+                 "cooldown_start": cooldown_start}
+        if wandb_run is not None and getattr(wandb_run, "run", None) is not None:
+            extra["wandb_id"] = wandb_run.run.id
+        return save_checkpoint(model, optimizer, global_step, global_step, cfg, tag=tag, extra=extra)
 
     criterion = nn.CrossEntropyLoss()
     eff_batch  = cfg.training.batch_size * cfg.training.gradient_accumulation_steps
@@ -419,16 +597,10 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
     log.info(f"Tokens per step: {tokens_per_step:,}")
     log.info(f"Training for {cfg.training.max_steps:,} steps "
              f"= {cfg.training.max_steps * tokens_per_step / 1e9:.2f}B tokens")
+    log.info(f"Schedule: {cfg.training.schedule}"
+             + (f", cooldown from step {cooldown_start:,}" if cooldown_start is not None else ""))
+    log_mixture_passes(cfg, tokens_per_step, cooldown_start)
     log.info("Starting training...")
-
-    # LR lambda — needs cfg accessible
-    def get_lr(step):
-        if step < cfg.training.warmup_steps:
-            return step / max(1, cfg.training.warmup_steps)
-        progress = (step - cfg.training.warmup_steps) / max(
-            1, cfg.training.max_steps - cfg.training.warmup_steps)
-        ratio = cfg.training.min_lr / cfg.training.learning_rate
-        return ratio + 0.5 * (1 - ratio) * (1 + math.cos(math.pi * progress))
 
     running_loss = 0.0
     t0 = time.perf_counter()
@@ -439,8 +611,20 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
 
     while global_step < cfg.training.max_steps:
 
+        # WSD cooldown start: keep a branch point, then switch to the cooldown mix
+        if cooldown_start is not None and global_step == cooldown_start and global_step > start_step:
+            if not (Path(cfg.logging.output_dir) / "checkpoints" / "pre_cooldown.pt").exists():
+                checkpoint(tag="pre_cooldown")
+            if phase == 0 and phase_at(global_step, cfg) == 1:
+                log.info(f"Step {global_step}: cooldown starts, data mix -> {cfg.data.cooldown_mix}")
+                del train_iter, train_loader
+                phase = 1
+                loader = make_loader(phase, 0)
+                train_loader, _ = loader.get_dataloaders()
+                train_iter = iter(train_loader)
+
         # LR update
-        lr = cfg.training.learning_rate * get_lr(global_step)
+        lr = cfg.training.learning_rate * lr_factor(global_step, cfg.training)
         for pg in optimizer.param_groups:
             pg["lr"] = lr
 
@@ -502,6 +686,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
                 "train/loss":       avg_loss,
                 "train/perplexity": ppl,
                 "train/lr":         lr,
+                "train/phase":      phase,
                 "train/grad_norm":  grad_norm.item(),
                 "train/tokens_per_sec": tps,
                 "train/step":       global_step,
@@ -515,30 +700,30 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
 
         # Evaluation
         if global_step % cfg.training.eval_every == 0:
-            val_metrics = evaluate(
-                model, val_loader, device, eval_periodic, autocast_ctx
-            )
+            val_metrics = evaluate_all(eval_periodic)
+            extras = "".join(f" | {n} {val_metrics[f'val_{n}/loss']:.4f}" for n in extra_val)
             log.info(f"  Val loss: {val_metrics['val/loss']:.4f} | "
-                     f"ppl: {val_metrics['val/perplexity']:.1f}")
+                     f"ppl: {val_metrics['val/perplexity']:.1f}{extras}")
             log_metrics(wandb_run, global_step, val_metrics)
 
         # Checkpoint
         if global_step % cfg.training.save_every == 0:
-            save_checkpoint(model, optimizer, global_step, global_step, cfg)
+            checkpoint()
 
     # Final eval + checkpoint
-    val_metrics = evaluate(model, val_loader, device, eval_final, autocast_ctx)
+    val_metrics = evaluate_all(eval_final)
     wall_hours = (time.perf_counter() - t_start) / 3600
     log.info(f"Final val loss: {val_metrics['val/loss']:.4f} | "
              f"ppl: {val_metrics['val/perplexity']:.1f} | {wall_hours:.2f}h")
-    final = {f"final/{k.split('/')[-1]}": v for k, v in val_metrics.items()}
+    # val/loss -> final/loss, val_enc/loss -> final_enc/loss
+    final = {"final" + k[len("val"):]: v for k, v in val_metrics.items()}
     final["final/wall_hours"] = wall_hours
     final["final/tokens"] = global_step * tokens_per_step
     log_metrics(wandb_run, global_step, {**val_metrics, **final})
     if wandb_run:
         for k, v in final.items():
             wandb_run.run.summary[k] = v
-    save_checkpoint(model, optimizer, global_step, global_step, cfg, tag="final")
+    checkpoint(tag="final")
 
     if wandb_run:
         wandb_run.finish()
@@ -564,6 +749,9 @@ def main():
     parser.add_argument("--run-name", type=str, default=None)
     parser.add_argument("--group", type=str, default=None, help="W&B group")
     parser.add_argument("--output-dir", type=str, default=None)
+    parser.add_argument("--schedule", choices=["cosine", "wsd"], default=None)
+    parser.add_argument("--cooldown-start", type=int, default=None,
+                        help="WSD: first cooldown step (branch a cooldown off a stable checkpoint)")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -585,6 +773,10 @@ def main():
         cfg.logging.wandb_group = args.group
     if args.output_dir is not None:
         cfg.logging.output_dir = args.output_dir
+    if args.schedule is not None:
+        cfg.training.schedule = args.schedule
+    if args.cooldown_start is not None:
+        cfg.training.cooldown_start = args.cooldown_start
 
     if args.wandb:
         cfg.logging.use_wandb = True
@@ -599,7 +791,13 @@ def main():
 
     Path(cfg.logging.output_dir).mkdir(parents=True, exist_ok=True)
 
-    train(cfg, resume=args.resume)
+    resume = args.resume
+    if resume == "auto":
+        found = latest_checkpoint(cfg.logging.output_dir)
+        log.info(f"--resume auto: {found if found else 'no checkpoint, starting from step 0'}")
+        resume = str(found) if found else None
+
+    train(cfg, resume=resume)
 
 
 if __name__ == "__main__":
