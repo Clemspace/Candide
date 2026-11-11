@@ -224,11 +224,41 @@ released by ERC ModERN.
 - Throughput: 27.2k tok/s (Muon, mb 16, 29L); 26.4k effective with evaluation every 1,000 steps
   (3% overhead). At this rate 48 GPU-h buy ~4.6B tokens (1.6 passes), not the 5.05B of 4.5.
 - Caveats: one seed per rate, no noise estimate; horizon is 10% of the full run.
-- Proposed, to confirm (Clément):
+- Decided 2026-11-11 09:23 (proposals accepted without change):
   (a) full-run LR 2.4e-3, by the rule;
   (b) initialisation left unchanged: no instability at 29L, and a change would need the rate rechecked;
-  (c) shape frozen at 29L x 768: any throughput gain from the RoPE change goes to tokens, not to
-      layers, so that this check stays valid for the model that is trained.
+  (c) shape frozen at 29L x 768: throughput gains go to tokens, not to layers, so that this check
+      stays valid for the model that is trained.
+
+### 4.8 Full run: throughput fixes, final configuration, prediction — 2026-11-11
+- Real-valued RoPE (commit `b17f2ce`): same rotation without complex numbers, equality tests against
+  the complex version. +5.3% compiled at 18L (`results/2026-11-11/bench_a40_realrope.json`).
+- Declared causality: the decoder passed an explicit causal mask to the attention kernel; it now
+  declares `is_causal` when no other mask and no cache are involved. Kernel alone, A40,
+  (16, 12, 1024, 64), forward + backward: 8.34 ms masked, 3.59 ms declared
+  (`scripts/bench_sdpa_causal.py`). Tests: equality with the explicit mask, no dependence on future
+  tokens, cached decoding unchanged.
+- Throughput at the full-run shape (224.3M, Muon, compiled, mb 16):
+  **37.5k tok/s**, 23.6 GiB (`results/2026-11-11/bench_a40_causal.json`); it was 27.2k in 4.7. mb 32
+  does not fit.
+- Steps: **95,000** (6.23B tokens, ~47 h with evaluation every 2,000 steps). This is ~2.1 passes over
+  the main corpus, more than the 1.75 of 4.5: the gain was put into tokens because the shape is
+  frozen (4.7c). Checkpoint kept at 62,000, where the cooldown of a 77,500-step run (5.08B tokens,
+  the 4.5 sizing) would start, so that the shorter run can be branched later for comparison.
+- Mix (decided 09:23: rescale to keep the passes intended in 4.2 at the new token budget).
+  Stable phase (4.98B tokens) {main 0.994, enc 0.006}; cooldown (1.25B tokens)
+  {main 0.90, canon 0.075, enc 0.025}. Expected passes: Encyclopédie ~1.1 + ~1.2; canon ~1.0 in the
+  cooldown (canon size inferred from 4.2 as ~90M tokens, **[token count pending]**, 1.5); main ~2.1.
+  The canon share was rescaled by the same logic as the Encyclopédie; only the Encyclopédie was
+  discussed explicitly.
+- Config: `configs/full/gptplus_v2g.yaml`.
+- Prediction (Clément, before launch): final val loss **3.08** (first written 2.98 at 09:23, revised
+  09:35 before launch after being shown that it implied twice the drop predicted for the other two
+  sets); Encyclopédie vol. 17 **2.42**; canon **2.70**. Written when the plan was 72,000 steps (4.7B
+  tokens); the run was then extended to 95,000. Reference: 3.559 / 2.681 / 3.015 at 500M tokens (4.7).
+  For comparison, Claude's guess for val: ~3.12.
+- Pre-release: memorization probe (`scripts/memorization_probe.py`, "extracted") on the final
+  checkpoint and on the 62,000 branch if run: more passes, more memorisation to check. **[pending]**
 
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,

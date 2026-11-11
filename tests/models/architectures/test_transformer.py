@@ -576,3 +576,59 @@ class TestEdgeCases:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+# ============================================================================
+# DECLARED CAUSALITY (mask left to the attention kernel)
+# ============================================================================
+
+def _gpt_plus_config():
+    """The full-run block at toy size: GQA, QK-norm, RoPE, RMSNorm, SwiGLU, tied embeddings."""
+    return TransformerConfig(
+        vocab_size=97, d_model=64, n_layers=3, n_heads=4, n_kv_heads=2, d_ff=192,
+        max_seq_len=32, dropout=0.0, norm_first=True, norm_type="rms", attention_type="gqa",
+        ffn_type="swiglu", use_rope=True, bias=False, tie_word_embeddings=True, qk_norm=True,
+    )
+
+
+def test_declared_causality_is_on_for_the_full_run_block():
+    model = RamanujanTransformer(_gpt_plus_config())
+    assert model.declare_causal
+    assert all(block.attention.causal_when_unmasked for block in model.blocks)
+
+
+def test_declared_causality_matches_explicit_mask():
+    """Same logits whether the causal mask is declared to the kernel or passed explicitly."""
+    torch.manual_seed(0)
+    model = RamanujanTransformer(_gpt_plus_config()).eval()
+    ids = torch.randint(0, 97, (2, 32))
+    with torch.no_grad():
+        declared = model(ids)
+        model.declare_causal = False
+        explicit = model(ids)
+    torch.testing.assert_close(declared, explicit, rtol=0, atol=1e-5)
+
+
+def test_declared_causality_does_not_see_the_future():
+    """Changing a later token must not change any earlier position's logits."""
+    torch.manual_seed(0)
+    model = RamanujanTransformer(_gpt_plus_config()).eval()
+    ids = torch.randint(0, 97, (2, 32))
+    changed = ids.clone()
+    changed[:, 20:] = (changed[:, 20:] + 1) % 97
+    with torch.no_grad():
+        a, b = model(ids), model(changed)
+    torch.testing.assert_close(a[:, :20], b[:, :20], rtol=0, atol=1e-6)
+    assert not torch.allclose(a[:, 20:], b[:, 20:])
+
+
+def test_declared_causality_is_not_used_with_a_cache():
+    """Cached decoding still equals the full forward pass (the cache path keeps the explicit mask)."""
+    torch.manual_seed(0)
+    model = RamanujanTransformer(_gpt_plus_config()).eval()
+    ids = torch.randint(0, 97, (1, 24))
+    with torch.no_grad():
+        full = model(ids)
+        first, cache = model(ids[:, :16], use_cache=True)
+        rest, _ = model(ids[:, 16:], past_key_values=cache, use_cache=True)
+    torch.testing.assert_close(torch.cat([first, rest], dim=1), full, rtol=0, atol=1e-4)

@@ -103,6 +103,17 @@ class RamanujanTransformer(nn.Module):
         ])
         
         # Final normalization
+        # Declared causality (components/attention.py::_attend): when the only mask needed is
+        # the causal one, pass none and let the kernel apply it. On only if every block's
+        # attention supports it. Set ``declare_causal = False`` to force the explicit mask.
+        attention_modules = [getattr(block, "attention", None) for block in self.blocks]
+        self.declare_causal = all(
+            getattr(a, "supports_declared_causal", False) for a in attention_modules
+        )
+        if self.declare_causal:
+            for a in attention_modules:
+                a.causal_when_unmasked = True
+
         self.final_norm = get_normalization(config.norm_type, config.d_model)
         
         # Language modeling head
@@ -232,8 +243,10 @@ class RamanujanTransformer(nn.Module):
         if self.emb_dropout is not None:
             hidden_states = self.emb_dropout(hidden_states)
         
-        # Get attention mask
-        if attention_mask is None:
+        # Attention mask. With no mask from the caller and no cache, the mask would be the
+        # plain causal one: leave it to the kernel (declared causality, see _attend) when
+        # every attention module supports that; otherwise build it as before.
+        if attention_mask is None and not (self.declare_causal and past_length == 0):
             attention_mask = self.get_causal_mask(seq_len, input_ids.device, past_length)
         
         # Through transformer blocks

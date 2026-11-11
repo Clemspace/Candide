@@ -33,10 +33,23 @@ def _attend(module: nn.Module, q: Tensor, k: Tensor, v: Tensor, mask: Optional[T
     masked_fill(-inf), softmax, dropout, matmul); same kernel as ANGPTAttention,
     so the two arms of the normalization pilot compare like for like.
     """
+    # Declared causality. A decoder that needs nothing but the causal mask passes
+    # mask=None and sets ``causal_when_unmasked`` on its attention modules; the kernel is
+    # then told ``is_causal=True`` instead of being handed a (seq, seq) mask. Same
+    # attention, but the kernel takes its fastest path: on an A40 the masked call costs
+    # 8.3 ms and the declared one 3.6 ms at (16, 12, 1024, 64), forward and backward
+    # (scripts/bench_sdpa_causal.py). Only valid when queries and keys cover the same
+    # positions, so never with a key-value cache.
+    causal = (
+        mask is None
+        and getattr(module, "causal_when_unmasked", False)
+        and q.shape[-2] == k.shape[-2]
+    )
     return F.scaled_dot_product_attention(
         q, k, v,
         attn_mask=_sdpa_mask(mask),
         dropout_p=module.dropout if module.training else 0.0,
+        is_causal=causal,
         scale=module.scale,
     )
 
@@ -57,6 +70,11 @@ class MultiHeadAttention(BaseAttention):
         >>> out.shape
         torch.Size([2, 10, 768])
     """
+
+    # This class attends through _attend, so a decoder may leave the causal mask to the
+    # kernel (see _attend). ``causal_when_unmasked`` is switched on per instance by the model.
+    supports_declared_causal = True
+    causal_when_unmasked = False
     
     def __init__(
         self,
@@ -225,6 +243,11 @@ class GroupedQueryAttention(BaseAttention):
         >>> out.shape
         torch.Size([2, 10, 2048])
     """
+
+    # This class attends through _attend, so a decoder may leave the causal mask to the
+    # kernel (see _attend). ``causal_when_unmasked`` is switched on per instance by the model.
+    supports_declared_causal = True
+    causal_when_unmasked = False
     
     def __init__(
         self,

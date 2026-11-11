@@ -1,0 +1,23 @@
+{
+  "config": "configs/full/gptplus_v2g.yaml",
+  "gpu": "NVIDIA A40",
+  "rows": [
+    {
+      "optimizer": "muon",
+      "compile": true,
+      "micro_batch": 16,
+      "tokens_per_sec": 37525,
+      "sec_per_step": 1.746,
+      "tflops": 60.8,
+      "peak_mem_gib": 23.6,
+      "warmup_sec": 66.9,
+      "accum": 4
+    },
+    {
+      "optimizer": "muon",
+      "compile": true,
+      "micro_batch": 32,
+      "error": "out of memory"
+    }
+  ]
+}
