@@ -203,7 +203,32 @@ released by ERC ModERN.
   step 1250) and widens only in the cooldown: a short check favours a higher LR than a long run.
 - Decision: stop the 18L sweep. Muon LR is in [1.2e-3, 2.4e-3] or slightly above.
 - Next (one experiment, prediction to be written first): 1.2e-3 vs 2.4e-3 at the final shape,
-  ~500M tokens, after the real-valued RoPE change and re-bench. It covers depth transfer and horizon. **[pending]**
+  ~500M tokens. It covers depth transfer and horizon. Done: 4.7 (run before the RoPE change, not after).
+
+### 4.7 Depth and horizon check: Muon LR at 29L, 500M tokens — 2026-11-10 21:38 to 2026-11-11 07:10
+- Setup: 29L x 768, Muon, compiled, micro-batch 16, 7,630 steps (500M tokens), WSD with warmup 763
+  and cooldown from step 6,104, seed 1, code `fd7e528`. Two runs, 5.25 h each.
+- Rule (proposed 2026-11-10 21:35, same form as 4.3): lower final val loss wins; if the gap
+  is < 0.01, take 1.2e-3. **No prediction was written before launch** (second time; 4.6).
+- Result (`results/2026-11-11/depthcheck_29l.json`): final val loss 3.559 (2.4e-3), 3.577 (1.2e-3);
+  gap 0.018 > 0.01 -> by the rule, **2.4e-3**. Same ordering on `val_enc` (2.681 vs 2.697) and
+  `val_canon` (3.015 vs 3.038).
+- Shape of the curves: 2.4e-3 leads until ~step 3,000, then 1.2e-3 leads through the rest of the
+  stable phase, by a growing margin (0.006, 0.014, 0.022 at steps 4,000, 5,000, 6,000). The cooldown
+  reverses it: it is worth 0.247 to 2.4e-3 and 0.207 to 1.2e-3. Stable-phase loss is therefore not a
+  guide to the final loss, and intermediate checkpoints understate the model.
+- Depth transfer: both rates train stably at 29L without depth-scaled initialisation (gradient norm
+  flat, no divergence), and the ordering after cooldown is the same as at 18L. The post-cooldown
+  advantage of the higher rate is smaller here (0.018 at 500M tokens, 29L) than in 4.6 (0.038 at
+  100M tokens, 18L); the two differ in depth and horizon, so the trend is suggestive only.
+- Throughput: 27.2k tok/s (Muon, mb 16, 29L); 26.4k effective with evaluation every 1,000 steps
+  (3% overhead). At this rate 48 GPU-h buy ~4.6B tokens (1.6 passes), not the 5.05B of 4.5.
+- Caveats: one seed per rate, no noise estimate; horizon is 10% of the full run.
+- Proposed, to confirm (Clément):
+  (a) full-run LR 2.4e-3, by the rule;
+  (b) initialisation left unchanged: no instability at 29L, and a change would need the rate rechecked;
+  (c) shape frozen at 29L x 768: any throughput gain from the RoPE change goes to tokens, not to
+      layers, so that this check stays valid for the model that is trained.
 
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,

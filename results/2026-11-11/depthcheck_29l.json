@@ -1,0 +1,47 @@
+{
+ "source": "W&B export of 2026-11-11 08:53 CET, group depthcheck-v2g-29l",
+ "model": "GPT+ 29L x 768, v2g shards, Muon, compiled, micro-batch 16, 7630 steps x 65,536 tokens = 500M tokens, WSD (warmup 763, cooldown from step 6104), seed 1",
+ "code_commit": "fd7e528",
+ "runs": {
+  "muon-0.0024": {
+   "wandb_name": "depthcheck-29l-muon-2.4e-3",
+   "wandb_id": "fr0hvb8l",
+   "learning_rate": 0.0024,
+   "final_loss": 3.5591,
+   "final_enc_loss": 2.6809,
+   "final_canon_loss": 3.0153,
+   "tokens_per_sec_median": 27159,
+   "wall_hours": 5.264,
+   "val_curve": {
+    "1000": 4.4041,
+    "2000": 4.0909,
+    "3000": 3.965,
+    "4000": 3.8846,
+    "5000": 3.8418,
+    "6000": 3.806,
+    "7000": 3.6143,
+    "7630": 3.5591
+   }
+  },
+  "muon-0.0012": {
+   "wandb_name": "depthcheck-29l-muon-1.2e-3",
+   "wandb_id": "be5lzgaz",
+   "learning_rate": 0.0012,
+   "final_loss": 3.5768,
+   "final_enc_loss": 2.6968,
+   "final_canon_loss": 3.0379,
+   "tokens_per_sec_median": 27168,
+   "wall_hours": 5.245,
+   "val_curve": {
+    "1000": 4.431,
+    "2000": 4.1029,
+    "3000": 3.966,
+    "4000": 3.8791,
+    "5000": 3.828,
+    "6000": 3.7837,
+    "7000": 3.62,
+    "7630": 3.5768
+   }
+  }
+ }
+}

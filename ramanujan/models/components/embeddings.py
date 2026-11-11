@@ -204,7 +204,31 @@ class RotaryEmbedding(BaseEmbedding):
         
         # Precompute and register as buffer (not a parameter)
         freqs_cis = _precompute_freqs_cis(d_model, max_seq_len, theta, device)
+        self._set_tables(freqs_cis)
+
+    def _set_tables(self, freqs_cis: Tensor) -> None:
+        """Register the rotation tables. None is persistent: checkpoints do not hold them.
+
+        ``freqs_cis`` (complex) is kept as the reference definition. The forward pass uses
+        its real and imaginary parts, ``rope_cos`` and ``rope_sin``: the same rotation
+        written with real arithmetic, which torch.compile can generate code for (it falls
+        back to eager on complex operators) and which exports without complex tensors.
+        """
         self.register_buffer("freqs_cis", freqs_cis, persistent=False)
+        self.register_buffer("rope_cos", freqs_cis.real.contiguous(), persistent=False)
+        self.register_buffer("rope_sin", freqs_cis.imag.contiguous(), persistent=False)
+
+    @staticmethod
+    def _rotate(x: Tensor, cos: Tensor, sin: Tensor) -> Tensor:
+        """Rotate consecutive pairs (x[2i], x[2i+1]) by the angle of position and pair i.
+
+        Identical to view_as_complex(x) * freqs_cis: (a + ib)(c + is) = (ac - bs) + i(as + bc).
+        Computed in float32 and cast back, as the complex version did.
+        """
+        pairs = x.float().reshape(*x.shape[:-1], -1, 2)
+        a, b = pairs[..., 0], pairs[..., 1]
+        out = torch.stack((a * cos - b * sin, a * sin + b * cos), dim=-1).flatten(-2)
+        return out.type_as(x)
     
     def forward(
         self,
@@ -227,32 +251,21 @@ class RotaryEmbedding(BaseEmbedding):
         """
         seq_len = xq.shape[-2]
         
-        # Get frequencies for current sequence
+        # Rotation tables for the positions in play (real arithmetic: see _set_tables).
         if position_ids is not None:
-            # Use specific positions
-            freqs_cis = self.freqs_cis[position_ids]  # (batch, seq_len, dim//2)
+            # [batch, seq_len, dim//2] -> [batch, 1, seq_len, dim//2]: broadcast over heads
+            assert position_ids.shape[0] == xq.shape[0] and position_ids.shape[1] == seq_len, \
+                f"position_ids {tuple(position_ids.shape)} vs x {tuple(xq.shape)}"
+            cos = self.rope_cos[position_ids].unsqueeze(1)
+            sin = self.rope_sin[position_ids].unsqueeze(1)
         else:
-            # Use sequential positions
-            freqs_cis = self.freqs_cis[start_pos : start_pos + seq_len]
-        
-        # Reshape to pairs: [..., seq_len, dim] -> [..., seq_len, dim//2, 2]
-        # Then view as complex: [..., seq_len, dim//2]
-        xq_ = torch.view_as_complex(
-            xq.float().reshape(*xq.shape[:-1], -1, 2)
-        )
-        xk_ = torch.view_as_complex(
-            xk.float().reshape(*xk.shape[:-1], -1, 2)
-        )
-        
-        # Reshape freqs for broadcasting
-        freqs_cis = _reshape_for_broadcast(freqs_cis, xq_)
-        
-        # Complex multiplication = rotation
-        xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(-2)
-        xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(-2)
-        
-        # Return with original dtype
-        return xq_out.type_as(xq), xk_out.type_as(xk)
+            # [seq_len, dim//2]: broadcasts over every leading dimension
+            cos = self.rope_cos[start_pos : start_pos + seq_len]
+            sin = self.rope_sin[start_pos : start_pos + seq_len]
+            assert cos.shape[0] == seq_len, \
+                f"positions {start_pos}..{start_pos + seq_len} exceed max_seq_len {self.max_seq_len}"
+
+        return self._rotate(xq, cos, sin), self._rotate(xk, cos, sin)
     
     def extend_seq_len(self, new_max_len: int):
         """
@@ -267,7 +280,7 @@ class RotaryEmbedding(BaseEmbedding):
                 self.theta,
                 device=self.freqs_cis.device
             )
-            self.register_buffer("freqs_cis", freqs_cis, persistent=False)
+            self._set_tables(freqs_cis)
             self.max_seq_len = new_max_len
     
     def extra_repr(self) -> str:

@@ -398,3 +398,50 @@ def test_embeddings_batch_independence():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+# ============================================================================
+# REAL-VALUED ROPE == COMPLEX REFERENCE
+# ============================================================================
+
+def _complex_reference(rope, x, position_ids=None, start_pos=0):
+    """The implementation this replaces: complex multiplication by freqs_cis."""
+    seq_len = x.shape[-2]
+    if position_ids is not None:
+        f = rope.freqs_cis[position_ids].unsqueeze(1)
+    else:
+        f = rope.freqs_cis[start_pos:start_pos + seq_len]
+    x_ = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
+    return torch.view_as_real(x_ * f).flatten(-2).type_as(x)
+
+
+@pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
+@pytest.mark.parametrize("case", ["sequential", "start_pos", "position_ids"])
+def test_rope_real_matches_complex_reference(case, dtype):
+    """The real rotation used in forward must equal the complex one it replaces."""
+    torch.manual_seed(0)
+    rope = RotaryEmbedding(d_model=64, max_seq_len=128)
+    q = torch.randn(2, 8, 10, 64).to(dtype)
+    k = torch.randn(2, 8, 10, 64).to(dtype)
+    kw = {}
+    if case == "start_pos":
+        kw = dict(start_pos=17)
+    elif case == "position_ids":
+        kw = dict(position_ids=torch.randint(0, 128, (2, 10)))
+    q_rot, k_rot = rope(q, k, **kw)
+    assert q_rot.dtype == dtype and k_rot.dtype == dtype
+    # Same products in float32, so at most a last-bit difference; bf16 is compared after
+    # the cast back, where one float32 ulp can at worst move a value by one bf16 step.
+    tol = dict(rtol=0, atol=1e-5) if dtype == torch.float32 else dict(rtol=1e-2, atol=1e-2)
+    torch.testing.assert_close(q_rot, _complex_reference(rope, q, **kw), **tol)
+    torch.testing.assert_close(k_rot, _complex_reference(rope, k, **kw), **tol)
+
+
+def test_rope_tables_are_not_in_checkpoints_and_follow_extension():
+    """No rotation table is persistent (existing checkpoints load unchanged); tables extend together."""
+    rope = RotaryEmbedding(d_model=64, max_seq_len=128)
+    assert not any("rope" in key or "freqs" in key for key in rope.state_dict())
+    rope.extend_seq_len(256)
+    assert rope.rope_cos.shape == rope.rope_sin.shape == (256, 32)
+    torch.testing.assert_close(rope.rope_cos, rope.freqs_cis.real)
+    torch.testing.assert_close(rope.rope_sin, rope.freqs_cis.imag)
