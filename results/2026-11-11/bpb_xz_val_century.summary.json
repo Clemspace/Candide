@@ -1,0 +1,80 @@
+{
+ "from_docs": "results/2026-11-11/bpb_xz_val.docs.jsonl",
+ "group_by": "century",
+ "groups": {
+  "all": {
+   "documents": 515,
+   "bytes": 56896775,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.70138,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.60284,
+    2.78909
+   ]
+  },
+  "undated": {
+   "documents": 186,
+   "bytes": 18625915,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.77312,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.68947,
+    2.89283
+   ]
+  },
+  "1500s": {
+   "documents": 1,
+   "bytes": 143417,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.92562,
+   "bits_per_token": null,
+   "bytes_per_token": null
+  },
+  "1700s": {
+   "documents": 304,
+   "bytes": 30735346,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.71409,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.57883,
+    2.86001
+   ]
+  },
+  "1600s": {
+   "documents": 22,
+   "bytes": 7375112,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.46089,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.27567,
+    2.69805
+   ]
+  },
+  "1800s": {
+   "documents": 2,
+   "bytes": 16985,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 3.57021,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    3.36357,
+    3.87149
+   ]
+  }
+ }
+}

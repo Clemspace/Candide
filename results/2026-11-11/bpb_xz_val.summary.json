@@ -1,0 +1,121 @@
+{
+ "settings": {
+  "model": "compress:xz",
+  "tokenizer": "none",
+  "bos_token": false,
+  "max_len": 1024,
+  "stride": 512,
+  "clean_entities": true,
+  "excerpt_chars": null,
+  "device": "cpu",
+  "torch": null,
+  "input": "/data/pretrain_candide/testsets/val_v2g.jsonl",
+  "group_by": "subcorpus"
+ },
+ "groups": {
+  "all": {
+   "documents": 515,
+   "bytes": 56896775,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.70138,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.60284,
+    2.78909
+   ]
+  },
+  "modern_canon": {
+   "documents": 13,
+   "bytes": 1872837,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.2337,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.07231,
+    3.24081
+   ]
+  },
+  "modern_press": {
+   "documents": 163,
+   "bytes": 16046898,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.76655,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.68687,
+    2.89174
+   ]
+  },
+  "modern_dicos": {
+   "documents": 3,
+   "bytes": 1385468,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.31405,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.20781,
+    2.44694
+   ]
+  },
+  "modern_pamphlets": {
+   "documents": 129,
+   "bytes": 3094250,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 3.15963,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    3.03011,
+    3.30107
+   ]
+  },
+  "modern_lettres": {
+   "documents": 70,
+   "bytes": 263599,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 4.06168,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    3.98653,
+    4.14244
+   ]
+  },
+  "modern_archive": {
+   "documents": 16,
+   "bytes": 2382711,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.79379,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.40523,
+    3.00021
+   ]
+  },
+  "modern_merged": {
+   "documents": 121,
+   "bytes": 31851012,
+   "tokens": 0,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 2.6502,
+   "bits_per_token": null,
+   "bytes_per_token": null,
+   "ci95": [
+    2.49595,
+    2.78226
+   ]
+  }
+ }
+}

@@ -7,7 +7,7 @@ script gathers their text, with the metadata needed to break results down, into 
 that scripts/score_text.py --jsonl reads:
 
     {"id": "modern_canon/voltaire_candide.txt", "subcorpus": "modern_canon", "year": 1759,
-     "decade": "1750s", "century": "18th", "genre": ..., "author": ..., "title": ...,
+     "decade": "1750s", "century": "1700s", "genre": ..., "author": ..., "title": ...,
      "n_chars": 181234, "text": "..."}
 
 Year, genre, author and title come from the inventory (scripts/inventory_corpus.py) when
@@ -26,9 +26,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-CENTURIES = {15: "16th", 16: "17th", 17: "18th", 18: "19th"}
-
-
 def load_inventory(path):
     """(sub-corpus, file stem) -> metadata; stems that occur twice in a sub-corpus are dropped."""
     index, seen = {}, Counter()
@@ -41,12 +38,16 @@ def load_inventory(path):
 
 
 def period(year):
-    """(decade, century) labels for a year, or ('undated', 'undated')."""
+    """(decade, century) labels for a year, e.g. ('1750s', '1700s'), or ('undated', 'undated').
+
+    Centuries are labelled by their hundreds, not by ordinal: a file dated 1800, the last
+    year the period policy admits, is '1800s' and stays visible as such.
+    """
     try:
         y = int(year)
     except (TypeError, ValueError):
         return "undated", "undated"
-    return f"{y // 10 * 10}s", CENTURIES.get(y // 100, f"{y // 100 + 1}th")
+    return f"{y // 10 * 10}s", f"{y // 100 * 100}s"
 
 
 def val_rows(manifest, split="val"):

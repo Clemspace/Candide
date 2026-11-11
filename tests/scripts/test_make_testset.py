@@ -45,9 +45,9 @@ def test_only_kept_validation_files_with_metadata(tmp_path):
     recs = {r["id"]: r for r in map(json.loads, out.read_text(encoding="utf-8").splitlines())}
     assert set(recs) == {"canon/candide.txt", "press/gazette.txt", "press/sans_date.txt"}
     c = recs["canon/candide.txt"]
-    assert (c["year"], c["decade"], c["century"], c["author"]) == (1759, "1750s", "18th", "Voltaire")
+    assert (c["year"], c["decade"], c["century"], c["author"]) == (1759, "1750s", "1700s", "Voltaire")
     assert c["text"].startswith("texte de canon/candide.txt") and c["n_chars"] == len(c["text"])
-    assert (recs["press/gazette.txt"]["decade"], recs["press/gazette.txt"]["century"]) == ("1680s", "17th")
+    assert (recs["press/gazette.txt"]["decade"], recs["press/gazette.txt"]["century"]) == ("1680s", "1600s")
     assert recs["press/sans_date.txt"]["decade"] == "undated" and recs["press/sans_date.txt"]["year"] is None
 
 
@@ -61,5 +61,6 @@ def test_without_inventory_and_with_a_cap(tmp_path):
 
 
 def test_period_labels():
-    assert M.period("1759") == ("1750s", "18th") and M.period(1600) == ("1600s", "17th")
+    assert M.period("1759") == ("1750s", "1700s") and M.period(1600) == ("1600s", "1600s")
+    assert M.period(1800) == ("1800s", "1800s") and M.period(1799) == ("1790s", "1700s")
     assert M.period("") == ("undated", "undated") and M.period(None) == ("undated", "undated")
