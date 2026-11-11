@@ -1,0 +1,27 @@
+{
+ "settings": {
+  "model": "candide:/home/ccastellon/candide_cracked/candide1.0/runs/depthcheck/muon-2.4e-3/checkpoints/final.pt",
+  "tokenizer": "/data/pretrain_candide/tokenizer_v2g/tokenizer.json",
+  "bos_token": true,
+  "max_len": 1024,
+  "stride": 512,
+  "clean_entities": true,
+  "excerpt_chars": null,
+  "device": "cuda",
+  "torch": "2.5.1+cu121",
+  "input": [
+   "/data/pretrain_candide/extracted_enc/encyclopedie/ENC_volume17.txt"
+  ]
+ },
+ "groups": {
+  "all": {
+   "documents": 1,
+   "bytes": 6421898,
+   "tokens": 1514668,
+   "tokens_not_scored": 0,
+   "bits_per_byte": 0.8958,
+   "bits_per_token": 3.79803,
+   "bytes_per_token": 4.2398
+  }
+ }
+}

@@ -1,0 +1,1 @@
+{"id": "/data/pretrain_candide/extracted_enc/encyclopedie/ENC_volume17.txt", "n_bytes": 6421898, "n_tokens": 1514668, "n_scored": 1514668, "nll_nats": 3987506.596, "bits_per_byte": 0.8958, "bits_per_token": 3.79803, "dir": "encyclopedie"}
