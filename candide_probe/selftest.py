@@ -61,12 +61,14 @@ def run(ckpt: str, tokenizer: str, device: str) -> int:
     ids = tok.encode(res["text"])
     backend = _ScorerBackend(loaded.model, tok, ours["max_len"], cid)
     ref_nll, ref_n = S.score_ids(backend, ids, ours["max_len"], ours["stride"], batch_size=8, device=device)
-    print(f"score: {len(ids)} tokens, {ours['bits_per_byte']:.4f} bits/byte, {ref_n} scored by score_text")
-    row("score: |probe - score_text| / total", abs(ours["nll_nats"] - ref_nll) / ref_nll, 1e-3)
+    print(f"score: {len(ids)} tokens, {ours['bits_per_byte']:.4f} bits/byte (a repeated paragraph: the model "
+          f"copies after the first pass), {ref_n} scored by score_text")
+    row("score: |probe - score_text| / total", abs(ours["nll_nats"] - ref_nll) / ref_nll, 1e-5)
+    row("score: |probe - score_text| nats per token", abs(ours["nll_nats"] - ref_nll) / max(1, ref_n), 1e-5)
     row("score: tokens scored differ", abs(ours["n_scored"] - ref_n), 0)
 
     lens = e.lens(cid, SAMPLE)
-    row("lens: last layer vs output, max |dp|", lens["check"]["last_layer_vs_model_max_abs_prob_diff"], 1e-3)
+    row("lens: last layer vs output, max |dp| (fp32)", lens["check"]["last_layer_vs_model_max_abs_prob_diff"], 1e-4)
 
     x = torch.tensor([[tok.bos_id] + tok.encode(SAMPLE)[:120]], device=device)
     with torch.no_grad():

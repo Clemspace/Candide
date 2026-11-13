@@ -10,7 +10,7 @@ its windows, so the probe and the scorer agree:
 
 Probabilities reported for generated tokens are those of the model (temperature 1, no
 truncation); temperature, top-k, top-p and the repetition penalty only decide which token
-is drawn. The logit lens applies the model's own unembedding (final norm and head for
+is drawn. The logit lens runs in fp32 and applies the model's own unembedding (final norm and head for
 GPT+, head and logit scale for anGPT) to the residual stream after each block. Attention
 weights are recomputed explicitly inside every call to scaled_dot_product_attention during
 one forward pass, so they are read from the model as it runs, whatever the architecture.
@@ -31,6 +31,7 @@ from .errors import ProbeError
 from .text import CandideTokenizer, check_compatible, prepare, score_text_module
 
 LN2 = math.log(2.0)
+SCORE_BATCH = 8            # score_text's default --batch-size
 LENS_MAX_TOKENS = 256
 ATTN_MAX_TOKENS = 160
 
@@ -171,7 +172,8 @@ class Engine:
         meta["warnings"] = check_compatible(self.tok, meta)
         meta["compatible"] = not meta["warnings"]
         meta["notes"] = ["The checkpoint records its vocabulary size, not the tokenizer that made its "
-                         "shards; v1 and v2g have the same size. Check data.shards_dir."]
+                         "shards: the check refuses a tokenizer of another size (the one in tokenizer/ "
+                         "has 32,133 entries, v2g 32,132), not one of the same size. See data.shards_dir."]
         return meta
 
     # -- model access ---------------------------------------------------------
@@ -216,22 +218,32 @@ class Engine:
                 st = min(stride or L // 2, L - 1)
                 t0 = time.time()
                 per = [None] * len(seq)
-                for begin, end, first in S.windows(len(seq), L, st):
-                    x = torch.tensor([seq[begin:end]], device=self.device)
-                    logp = torch.log_softmax(self._forward(ctx.model, x)[0], dim=-1)   # [T, V]
-                    rows = torch.arange(first - begin - 1, end - begin - 1, device=self.device)
-                    tgt = x[0, first - begin:end - begin]
-                    lp = logp[rows, tgt]
-                    rank = (logp[rows] > lp[:, None]).sum(-1)
-                    ent = _entropy(logp[rows])
-                    p_top, i_top = _top(logp[rows], topk)
-                    lp, rank, ent = lp.tolist(), rank.tolist(), ent.tolist()      # one copy to host
-                    p_top, i_top = p_top.tolist(), i_top.tolist()
-                    for j in range(len(lp)):
-                        per[first + j] = {
-                            "nll": -lp[j], "rank": rank[j] + 1, "entropy": ent[j],
-                            "top": [[i, p] for i, p in zip(i_top[j], p_top[j])],
-                        }
+                spans = list(S.windows(len(seq), L, st))
+                for c in range(0, len(spans), SCORE_BATCH):
+                    # same batches, padding and precision as score_text.score_ids, so that the
+                    # bf16 kernels, and therefore the numbers, are the scorer's own
+                    chunk = spans[c:c + SCORE_BATCH]
+                    width = max(end - begin for begin, end, _ in chunk)
+                    x = torch.zeros(len(chunk), width, dtype=torch.long)
+                    for r, (begin, end, _) in enumerate(chunk):
+                        x[r, :end - begin] = torch.tensor(seq[begin:end], dtype=torch.long)
+                    logits = self._forward(ctx.model, x.to(self.device))
+                    for r, (begin, end, first) in enumerate(chunk):
+                        rows = torch.arange(first - begin - 1, end - begin - 1, device=self.device)
+                        logp = torch.log_softmax(logits[r, rows], dim=-1)            # [n, V]
+                        tgt = x[r, first - begin:end - begin].to(self.device)
+                        lp = logp.gather(-1, tgt[:, None])[:, 0]
+                        rank = (logp > lp[:, None]).sum(-1)
+                        ent = _entropy(logp)
+                        p_top, i_top = _top(logp, topk)
+                        lp, rank, ent = lp.tolist(), rank.tolist(), ent.tolist()  # one copy to host
+                        p_top, i_top = p_top.tolist(), i_top.tolist()
+                        for j in range(len(lp)):
+                            per[first + j] = {
+                                "nll": -lp[j], "rank": rank[j] + 1, "entropy": ent[j],
+                                "top": [[i, p] for i, p in zip(i_top[j], p_top[j])],
+                            }
+                    del logits
                 tokens = per[len(prefix):]
                 scored = [t for t in tokens if t is not None]
                 nll = sum(t["nll"] for t in scored)
@@ -388,7 +400,7 @@ class Engine:
             for cid in ckpt_ids:
                 ctx = self.context(cid)
                 L = min(max_len or ctx.max_len, ctx.max_len)
-                kw = dict(max_len=L, stride=min(stride or L // 2, L - 1), batch_size=8,
+                kw = dict(max_len=L, stride=min(stride or L // 2, L - 1), batch_size=SCORE_BATCH,
                           device=self.device, clean=clean)
                 backend = _ScorerBackend(ctx.model, self.tok, L, cid)
                 base = S.score_text(backend, prompt, **kw).nll_nats if p_prep else 0.0
@@ -413,7 +425,7 @@ class Engine:
             for cid in ckpt_ids:
                 ctx = self.context(cid)
                 L = min(max_len or ctx.max_len, ctx.max_len)
-                kw = dict(max_len=L, stride=min(stride or L // 2, L - 1), batch_size=8,
+                kw = dict(max_len=L, stride=min(stride or L // 2, L - 1), batch_size=SCORE_BATCH,
                           device=self.device, clean=clean)
                 backend = _ScorerBackend(ctx.model, self.tok, L, cid)
                 rows = []
@@ -455,7 +467,8 @@ class Engine:
                     lambda m, a, o: resid.append((o[0] if isinstance(o, tuple) else o).detach())))
             x = torch.tensor([ids], device=self.device)
             try:
-                final = self._forward(model, x)[0]
+                with torch.no_grad():                # fp32: the lens is exact, last row = output
+                    final = _logits(model(x)).float()[0]
             finally:
                 for h in hooks:
                     h.remove()
@@ -464,8 +477,7 @@ class Engine:
             layers = []
             with torch.no_grad():
                 for l, h in enumerate(resid):
-                    with _precision(self.device):
-                        lg = unembed(model, h[0]).float()
+                    lg = unembed(model, h).float()[0]
                     logp = torch.log_softmax(lg, dim=-1)
                     lp = logp.gather(-1, tgt[:, None])[:, 0]
                     rank = (logp > lp[:, None]).sum(-1) + 1
@@ -480,7 +492,7 @@ class Engine:
                                 for ii, pp in zip(i_top.tolist(), p_top.tolist())],
                     })
                 gap = float((torch.log_softmax(final, -1).exp()
-                             - torch.log_softmax(unembed(model, resid[-1][0]).float(), -1).exp()).abs().max())
+                             - torch.log_softmax(unembed(model, resid[-1]).float()[0], -1).exp()).abs().max())
         labels = {}
         for layer in layers:
             for row in layer["top"]:

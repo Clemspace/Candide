@@ -9,7 +9,7 @@ its branched cooldowns and the pilot anGPT arms without any change.
 ```
 # on obtic-gpu1
 PYTHONPATH=. python -m candide_probe --runs runs/ \
-    --tokenizer /data/pretrain_candide/tokenizer/tokenizer.json
+    --tokenizer /data/pretrain_candide/tokenizer_v2g/tokenizer.json
 
 # on the laptop
 ssh -N -L 7860:127.0.0.1:7860 obtic-gpu1     # then open http://127.0.0.1:7860
@@ -64,9 +64,10 @@ margins:
 
 ## Limits
 
-- One tokenizer per server. A checkpoint records its vocabulary size, not the tokenizer
-  that made its shards. v1 and v2g have the same size, so a pilot checkpoint (v1) passes
-  the size check with the v2g tokenizer and gives wrong text. The side panel shows
-  `data.shards_dir` so you can check.
+- One tokenizer per server, default `/data/pretrain_candide/tokenizer_v2g/tokenizer.json`.
+  A checkpoint records its vocabulary size, not the tokenizer that made its shards. The
+  probe refuses a tokenizer of another size: the file in `tokenizer/` has 32,133 entries,
+  v2g has 32,132. It cannot tell apart two tokenizers of the same size. The side panel
+  shows `data.shards_dir` so you can check.
 - Lens: first 256 tokens. Attention: first 160 tokens.
 - Read-only: no ablation or activation patching.

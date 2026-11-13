@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .text import REPO
 
-DEFAULT_TOKENIZER = "/data/pretrain_candide/tokenizer/tokenizer.json"
+DEFAULT_TOKENIZER = "/data/pretrain_candide/tokenizer_v2g/tokenizer.json"
 
 
 def main(argv=None) -> int:

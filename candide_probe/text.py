@@ -125,8 +125,9 @@ def check_compatible(tokenizer: CandideTokenizer, meta: dict) -> list[str]:
     """Problems that make this tokenizer wrong for a checkpoint (empty list = none found).
 
     The checkpoint records its vocabulary size (from the embedding) but not the tokenizer
-    that made its shards: two tokenizers of the same size (v1 and v2g) cannot be told apart
-    from the checkpoint alone. That case is reported as a warning by the caller.
+    that made its shards: a tokenizer of another size is refused (the one in
+    /data/pretrain_candide/tokenizer/ has 32,133 entries, v2g has 32,132), one of the same
+    size cannot be told apart from the checkpoint alone.
     """
     problems = []
     vocab = meta.get("vocab_size")
