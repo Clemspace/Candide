@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candide probe</title>
+<style>
+:root {
+  --paper: #f5f2ea; --panel: #fbf9f4; --ink: #1f1c17; --muted: #6d665a; --faint: #a39b8c;
+  --rule: #dcd4c4; --rule-strong: #c4baa6; --accent: #8c2f1e; --accent-ink: #fff8f0;
+  --cool: 44, 93, 138; --warm: 160, 52, 30; --hi: #efe6d2;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+:root.dark {
+  --paper: #15140f; --panel: #1c1a15; --ink: #ece6d8; --muted: #a59d8c; --faint: #6f685b;
+  --rule: #2f2c24; --rule-strong: #443f33; --accent: #d9825e; --accent-ink: #1a120c;
+  --cool: 110, 160, 210; --warm: 225, 110, 70; --hi: #2a261d;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); }
+button, input, select, textarea { font: inherit; color: inherit; }
+header { display: flex; align-items: baseline; gap: 18px; padding: 12px 20px 10px; border-bottom: 1px solid var(--rule); }
+.wordmark { font: 600 19px var(--serif); letter-spacing: .02em; }
+.wordmark span { font-variant: small-caps; font-weight: 400; color: var(--muted); letter-spacing: .08em; margin-left: 6px; }
+.status { font: 12px var(--mono); color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.status b { color: var(--ink); font-weight: 500; }
+.badge { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 3px; background: var(--accent); color: var(--accent-ink); }
+.spacer { flex: 1; }
+.linkish { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; }
+.linkish:hover { color: var(--ink); }
+
+main { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 46px); }
+aside { border-right: 1px solid var(--rule); padding: 14px 14px 30px; overflow-y: auto; max-height: calc(100vh - 46px); position: sticky; top: 0; }
+h3 { font: 600 11px var(--sans); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.run { margin-bottom: 12px; }
+.run-name { font: 12px var(--mono); color: var(--muted); margin: 4px 0; word-break: break-all; }
+.ck { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+.ck:hover { background: var(--hi); }
+.ck.primary { background: var(--ink); color: var(--paper); }
+.ck.primary .ck-sub { color: var(--faint); }
+.ck input { margin: 0; accent-color: var(--accent); }
+.ck-name { font: 13px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-sub { font: 11px var(--mono); color: var(--muted); }
+.pill { font: 10px var(--mono); padding: 0 5px; border-radius: 8px; border: 1px solid currentColor; margin-left: 4px; }
+.pill.cooldown { color: rgb(var(--cool)); }
+.pill.stable { color: var(--muted); }
+.ck.primary .pill { color: var(--paper); }
+.hint { font-size: 12px; color: var(--muted); margin: 6px 0 12px; }
+
+.meta { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.meta dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: 12px; }
+.meta dt { color: var(--muted); }
+.meta dd { margin: 0; font-family: var(--mono); word-break: break-all; }
+.warn { color: var(--accent); font-size: 12px; margin: 8px 0 0; }
+.note { color: var(--muted); font-size: 11px; margin: 6px 0 0; }
+
+section.content { padding: 0 24px 40px; min-width: 0; }
+nav.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--rule); margin: 0 -24px 18px; padding: 0 24px; position: sticky; top: 0; background: var(--paper); z-index: 5; }
+nav.tabs button { background: none; border: none; padding: 12px 14px 10px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 500; }
+nav.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
+.pane { display: none; }
+.pane.on { display: block; }
+.pane-intro { color: var(--muted); max-width: 820px; margin: 0 0 14px; font-size: 13px; }
+
+textarea.text { width: 100%; min-height: 84px; resize: vertical; padding: 10px 12px; border: 1px solid var(--rule-strong); border-radius: 4px; background: var(--panel); font: 16px/1.55 var(--serif); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 10px 0 14px; font-size: 13px; }
+.controls label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.controls input[type=number] { width: 72px; padding: 3px 6px; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--panel); font-family: var(--mono); font-size: 12px; }
+.controls select { padding: 3px 6px; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--panel); font-size: 12px; }
+.btn { padding: 6px 14px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: progress; }
+.btn.ghost { background: none; color: var(--ink); border-color: var(--rule-strong); }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.err { color: var(--accent); white-space: pre-wrap; font: 12px var(--mono); margin: 8px 0; }
+.ok { color: var(--muted); font: 12px var(--mono); margin: 6px 0; }
+
+.tokens { font: 17px/1.9 var(--serif); white-space: pre-wrap; word-wrap: break-word; padding: 14px 16px; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; }
+.tok { border-radius: 2px; cursor: default; padding: 1px 0; }
+.tok.click { cursor: pointer; }
+.tok:hover { outline: 1px solid var(--ink); }
+.tok.prompt { color: var(--muted); }
+.tok.special { font: 10px var(--mono); color: var(--muted); border: 1px solid var(--rule-strong); padding: 0 3px; margin-right: 2px; vertical-align: 2px; }
+.tok.pinned { outline: 2px solid var(--accent); }
+.tok .nl { color: var(--faint); font-size: 12px; }
+.tok.unscored { text-decoration: underline dotted var(--faint); }
+
+.legend { display: flex; align-items: center; gap: 8px; font: 11px var(--mono); color: var(--muted); margin: 6px 0; }
+.legend .bar { width: 160px; height: 10px; border-radius: 2px; border: 1px solid var(--rule); }
+
+table.data { border-collapse: collapse; font-size: 12.5px; margin: 10px 0; }
+table.data th, table.data td { padding: 4px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.data th { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+table.data td.l, table.data th.l { text-align: left; }
+table.data td { font-family: var(--mono); }
+table.data td.serif { font: 14px var(--serif); white-space: normal; }
+table.data tr.best td { font-weight: 600; }
+
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--panel); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.12); max-width: 360px; display: none; }
+.alts { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; font: 12px var(--mono); }
+.alts .w { font: 13px var(--serif); white-space: pre; }
+.alts .b { height: 7px; background: rgb(var(--warm)); border-radius: 1px; min-width: 1px; }
+.alts .hit { color: var(--accent); font-weight: 600; }
+.alts .pick { cursor: pointer; }
+.alts .pick:hover { background: var(--hi); }
+.kv { font: 11.5px var(--mono); color: var(--muted); margin-bottom: 6px; }
+.kv b { color: var(--ink); font-weight: 500; }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.inspector { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 12px; position: sticky; top: 56px; font-size: 12.5px; }
+.inspector.empty { color: var(--muted); }
+
+.lensgrid { overflow: auto; max-height: 72vh; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); }
+.lensgrid table { border-collapse: separate; border-spacing: 0; font: 11.5px var(--serif); }
+.lensgrid th, .lensgrid td { padding: 0 4px; height: 22px; min-width: 54px; max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: pre; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.lensgrid th { position: sticky; background: var(--panel); font-weight: 500; z-index: 2; }
+.lensgrid thead th { top: 0; }
+.lensgrid tfoot th { bottom: 0; color: var(--muted); }
+.lensgrid th.layer { left: 0; z-index: 3; font: 11px var(--mono); color: var(--muted); min-width: 52px; text-align: right; padding-right: 8px; }
+.lensgrid td.cur { outline: 1px solid var(--ink); }
+
+.heads { display: inline-grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.heads div { width: 22px; height: 14px; cursor: pointer; }
+.heads div.sel { outline: 2px solid var(--accent); outline-offset: -1px; }
+.heads .lab { background: var(--panel); font: 9.5px var(--mono); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: default; }
+canvas.pattern { border: 1px solid var(--rule); background: var(--panel); image-rendering: pixelated; cursor: crosshair; }
+
+svg.chart text { font: 10.5px var(--mono); fill: var(--muted); }
+svg.chart .axis { stroke: var(--rule-strong); }
+details.help { margin: 8px 0 14px; font-size: 12.5px; color: var(--muted); }
+details.help summary { cursor: pointer; }
+pre.example { font: 12px var(--mono); background: var(--panel); border: 1px solid var(--rule); padding: 8px 10px; border-radius: 4px; white-space: pre-wrap; color: var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wordmark">Candide<span>probe</span></div>
+  <div class="status" id="status">connecting…</div>
+  <div class="spacer"></div>
+  <button class="linkish" id="theme">dark</button>
+</header>
+<main>
+  <aside>
+    <div class="row" style="justify-content:space-between"><h3>Checkpoints</h3><button class="linkish" id="refresh">rescan</button></div>
+    <div class="hint">Click a name to inspect it. Tick others to compare against it in Score and Probes.</div>
+    <div id="ckpts"></div>
+    <div class="meta" id="meta"></div>
+  </aside>
+  <section class="content">
+    <nav class="tabs" id="tabs">
+      <button data-pane="complete" class="on">Complete</button>
+      <button data-pane="score">Score &amp; diff</button>
+      <button data-pane="lens">Lens</button>
+      <button data-pane="attn">Attention</button>
+      <button data-pane="probes">Probes</button>
+    </nav>
+
+    <!-- COMPLETE -->
+    <div class="pane on" id="pane-complete">
+      <p class="pane-intro">Continues a prompt with the selected checkpoint. Each new token is shaded by how unlikely the model found it (its own probability, before temperature or truncation). Hover for the alternatives; click a token to pin it, then click an alternative to continue from it.</p>
+      <textarea class="text" id="g-prompt">Le roi de France avoit déclaré</textarea>
+      <div class="controls">
+        <label>new tokens <input type="number" id="g-max" value="120" min="1" max="1000"></label>
+        <label><input type="checkbox" id="g-greedy"> greedy</label>
+        <label>temperature <input type="number" id="g-temp" value="0.8" step="0.05" min="0.05"></label>
+        <label>top-k <input type="number" id="g-topk" value="0" min="0" title="0 = off"></label>
+        <label>top-p <input type="number" id="g-topp" value="0.95" step="0.01" min="0.05" max="1"></label>
+        <label>rep. penalty <input type="number" id="g-rep" value="1.0" step="0.05" min="1"></label>
+        <label>seed <input type="number" id="g-seed" placeholder="random"></label>
+        <label><input type="checkbox" id="g-bos" checked> start of document</label>
+        <label><input type="checkbox" id="g-clean" checked> clean entities</label>
+        <button class="btn" id="g-run">Continue</button>
+      </div>
+      <div class="err" id="g-err"></div>
+      <div class="two">
+        <div>
+          <div class="kv" id="g-stats"></div>
+          <div class="tokens" id="g-out"></div>
+          <div class="legend" id="g-legend"></div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost small" id="g-extend" disabled>Continue from here</button>
+            <button class="btn ghost small" id="g-save" disabled>Save result</button>
+            <span class="ok" id="g-saved"></span>
+          </div>
+          <h3 style="margin-top:22px">History</h3>
+          <div id="g-hist" class="hint">Continuations of this session appear here.</div>
+        </div>
+        <div class="inspector empty" id="g-insp">Click a token to pin it.</div>
+      </div>
+    </div>
+
+    <!-- SCORE -->
+    <div class="pane" id="pane-score">
+      <p class="pane-intro">Scores a passage token by token, with the same windows and beginning-of-text token as <code>scripts/score_text.py</code> (the totals match it). With compared checkpoints ticked, the diff view shows where one checkpoint gains or loses against the selected one.</p>
+      <textarea class="text" id="s-text">Il n'eſt point de bonheur ſans vertu. Les philoſophes des Lumières ont ſoutenu que la raiſon humaine eſt capable de connoître les loix de la nature.</textarea>
+      <div class="controls">
+        <label><input type="checkbox" id="s-bos" checked> start of document</label>
+        <label><input type="checkbox" id="s-clean" checked> clean entities</label>
+        <label>alternatives <input type="number" id="s-topk" value="5" min="1" max="20"></label>
+        <button class="btn" id="s-run">Score</button>
+        <button class="btn ghost small" id="s-save" disabled>Save result</button>
+        <span class="ok" id="s-saved"></span>
+      </div>
+      <div class="err" id="s-err"></div>
+      <div id="s-summary"></div>
+      <div class="controls" id="s-view" style="display:none">
+        <label>view <select id="s-mode"></select></label>
+      </div>
+      <div class="tokens" id="s-out" style="display:none"></div>
+      <div class="legend" id="s-legend"></div>
+      <div id="s-diff"></div>
+    </div>
+
+    <!-- LENS -->
+    <div class="pane" id="pane-lens">
+      <p class="pane-intro">Logit lens: the model's own unembedding applied to the residual stream after each block. Each cell shows the most likely next token read at that depth; the shading shows the probability of the token that actually comes next. Columns are input positions; the bottom row is the true next token.</p>
+      <textarea class="text" id="l-text">Candide, chaſſé du château de Thunder-ten-tronckh, marcha longtemps ſans ſavoir où</textarea>
+      <div class="controls">
+        <label><input type="checkbox" id="l-bos" checked> start of document</label>
+        <label><input type="checkbox" id="l-clean" checked> clean entities</label>
+        <label>shade by <select id="l-color"><option value="p">p(next token)</option><option value="top">top-1 probability</option><option value="ent">entropy</option></select></label>
+        <button class="btn" id="l-run">Run lens</button>
+        <button class="btn ghost small" id="l-save" disabled>Save result</button>
+        <span class="ok" id="l-saved"></span>
+      </div>
+      <div class="err" id="l-err"></div>
+      <div class="kv" id="l-stats"></div>
+      <div class="lensgrid" id="l-out" style="display:none"></div>
+      <div class="legend" id="l-legend"></div>
+    </div>
+
+    <!-- ATTENTION -->
+    <div class="pane" id="pane-attn">
+      <p class="pane-intro">Attention weights, recomputed inside each attention call of one forward pass. Left: one summary per head and block (choose the measure). Click a head to see its pattern; hover a row of the pattern, or a word of the text, to see where that position attends.</p>
+      <textarea class="text" id="a-text">Monſieur, j'ai l'honneur de vous informer que la lettre que vous m'avez fait l'honneur de m'écrire m'eſt parvenue.</textarea>
+      <div class="controls">
+        <label><input type="checkbox" id="a-bos" checked> start of document</label>
+        <label><input type="checkbox" id="a-clean" checked> clean entities</label>
+        <label>summary <select id="a-metric"><option value="prev_token">previous token</option><option value="first_token">first token (sink)</option><option value="self">self</option><option value="entropy_rel">entropy (relative)</option></select></label>
+        <button class="btn" id="a-run">Run</button>
+      </div>
+      <div class="err" id="a-err"></div>
+      <div class="row" style="align-items:flex-start; gap:28px">
+        <div><div class="kv" id="a-sumlab"></div><div id="a-heads"></div></div>
+        <div><div class="kv" id="a-patlab"></div><canvas class="pattern" id="a-canvas" width="10" height="10" style="display:none"></canvas></div>
+      </div>
+      <div class="tokens" id="a-textview" style="display:none; margin-top:14px"></div>
+    </div>
+
+    <!-- PROBES -->
+    <div class="pane" id="pane-probes">
+      <p class="pane-intro">Likelihood probes, scored with <code>score_text</code> for the selected checkpoint and every ticked one. Candidates: which continuation of a prompt each checkpoint prefers. Probe sets: JSON lines of pairs (<code>a</code>, <code>b</code>: score_text's pairs mode) or choices (<code>prompt</code>, <code>choices</code>, optional <code>answer</code>), summarised by <code>group</code>.</p>
+      <h3>Candidates</h3>
+      <textarea class="text" id="c-prompt" style="min-height:52px">Il étoit une fois un jeune homme qui</textarea>
+      <textarea class="text" id="c-choices" style="min-height:70px; margin-top:6px; font-size:14px" placeholder="one continuation per line (leading space matters)"> avoit
+ avait
+ a eu</textarea>
+      <div class="controls"><label><input type="checkbox" id="c-clean" checked> clean entities</label><button class="btn" id="c-run">Rank</button></div>
+      <div class="err" id="c-err"></div>
+      <div id="c-out"></div>
+
+      <h3 style="margin-top:26px">Probe set</h3>
+      <details class="help"><summary>Format</summary>
+        <pre class="example">{"id": "oit-1", "group": "-oit/-ait", "a": "Il étoit tard.", "b": "Il était tard."}
+{"id": "date-1", "group": "dated", "prompt": "Le mot « électricité » se trouve", "choices": [" chez Furetière", " chez Littré"], "answer": 0}</pre>
+        The rows above only show the format; a probe set is built from the validation set (open TODO in the evaluation chapter). In pairs, <i>prefers a</i> is reported on total loss and per byte, as in score_text.
+      </details>
+      <textarea class="text" id="p-jsonl" style="min-height:120px; font: 12.5px/1.5 var(--mono)" placeholder='{"group": "…", "a": "…", "b": "…"}'></textarea>
+      <div class="controls">
+        <label>file <input type="file" id="p-file" accept=".jsonl,.json,.txt"></label>
+        <label>name <input type="text" id="p-name" placeholder="for the saved file" style="width:160px; padding:3px 6px; border:1px solid var(--rule-strong); border-radius:3px; background:var(--panel)"></label>
+        <label><input type="checkbox" id="p-clean" checked> clean entities</label>
+        <button class="btn" id="p-run">Run probe set</button>
+        <button class="btn ghost small" id="p-save" disabled>Save result</button>
+        <span class="ok" id="p-saved"></span>
+      </div>
+      <div class="err" id="p-err"></div>
+      <div id="p-out"></div>
+    </div>
+  </section>
+</main>
+<div id="tip"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const LN2 = Math.log(2);
+const S = { info: null, ckpts: [], meta: {}, primary: null, compare: new Set(), records: {} };
+
+// ── utilities ────────────────────────────────────────────────────────────────
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v !== null && v !== undefined) e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k !== null && k !== undefined) e.append(k);
+  return e;
+}
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+  if (!r.ok || j.error) throw new Error(j.error + (j.trace ? "\n" + j.trace : ""));
+  return j;
+}
+async function busy(btn, errEl, fn) {
+  btn.disabled = true; const label = btn.textContent; btn.textContent = "…"; errEl.textContent = "";
+  try { await fn(); } catch (e) { errEl.textContent = e.message; } finally { btn.disabled = false; btn.textContent = label; }
+}
+const f = (x, d = 3) => (x === null || x === undefined || Number.isNaN(x)) ? "–" : Number(x).toFixed(d);
+const pct = (x) => x === null || x === undefined ? "–" : (100 * x).toFixed(1) + "%";
+const shortName = (id) => { const c = S.ckpts.find((c) => c.id === id); return c ? c.name : id; };
+function label(id) { const c = S.ckpts.find((c) => c.id === id); return c ? `${c.run.split("/").pop()}/${c.name}` : id; }
+
+// colour scales (alpha on the theme's warm and cool rgb)
+function warm(v) { const a = Math.max(0, Math.min(1, v)); return a < 0.02 ? "transparent" : `rgba(${getVar("--warm")}, ${(0.08 + 0.72 * a).toFixed(3)})`; }
+function cool(v) { const a = Math.max(0, Math.min(1, v)); return a < 0.02 ? "transparent" : `rgba(${getVar("--cool")}, ${(0.08 + 0.72 * a).toFixed(3)})`; }
+const varCache = {};
+function getVar(n) { return varCache[n] || (varCache[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim()); }
+const bitsShade = (nll) => warm(Math.pow((nll / LN2) / 14, 0.8));          // 0..14 bits
+const diffShade = (d) => d > 0 ? warm(Math.min(1, d / 4)) : cool(Math.min(1, -d / 4)); // nats
+function legend(node, kind) {
+  node.innerHTML = "";
+  if (kind === "bits") node.append("0 bits", el("div", { class: "bar", style: `background: linear-gradient(90deg, transparent, ${warm(0.5)}, ${warm(1)})` }), "14+ bits of surprisal");
+  if (kind === "diff") node.append("better by 4 nats", el("div", { class: "bar", style: `background: linear-gradient(90deg, ${cool(1)}, transparent, ${warm(1)})` }), "worse by 4 nats");
+  if (kind === "p") node.append("p = 0", el("div", { class: "bar", style: `background: linear-gradient(90deg, transparent, ${cool(1)})` }), "p = 1");
+  if (kind === "ent") node.append("low entropy", el("div", { class: "bar", style: `background: linear-gradient(90deg, transparent, ${warm(1)})` }), "high entropy");
+}
+
+// tooltip
+const tip = $("tip");
+function showTip(ev, content) { tip.innerHTML = ""; tip.append(content); tip.style.display = "block"; moveTip(ev); }
+function moveTip(ev) {
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 16;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+function segText(seg) {
+  if (seg.special) return seg.text.replace(/<\|(.+)\|>/, "$1").toUpperCase();
+  return seg.text;
+}
+function tokenSpan(seg, cls = "") {
+  const s = el("span", { class: "tok " + cls + (seg.special ? " special" : "") });
+  const t = segText(seg);
+  if (!seg.special && /^\s*\n[\s\n]*$/.test(t)) { s.append(el("span", { class: "nl", text: "↵" }), t); }
+  else s.textContent = t;
+  return s;
+}
+function altList(top, labels, actualId, onPick) {
+  const g = el("div", { class: "alts" });
+  const max = Math.max(...top.map(([, p]) => p), 1e-9);
+  for (const [id, p] of top) {
+    const w = el("span", { class: "w" + (id === actualId ? " hit" : ""), text: JSON.stringify(labels[id] ?? `#${id}`).slice(1, -1) });
+    const bar = el("div", { class: "b", style: `width:${Math.max(1, 120 * p / max)}px` });
+    const v = el("span", { text: p >= 0.001 ? (100 * p).toFixed(1) + "%" : p.toExponential(1) });
+    const row = [w, bar, v];
+    if (onPick) for (const x of row) { x.classList.add("pick"); x.addEventListener("click", () => onPick(id)); }
+    g.append(...row);
+  }
+  return g;
+}
+function statLine(st) {
+  if (!st) return el("div", { class: "kv", text: "not scored (no preceding token)" });
+  return el("div", { class: "kv" }, "surprisal ", el("b", { text: f(st.nll / LN2, 2) + " bits" }),
+    "  p ", el("b", { text: pct(Math.exp(-st.nll)) }), "  rank ", el("b", { text: st.rank ?? "–" }),
+    st.entropy !== undefined ? "  entropy " : "", st.entropy !== undefined ? el("b", { text: f(st.entropy / LN2, 2) + " bits" }) : "");
+}
+
+// ── header, checkpoints, metadata ────────────────────────────────────────────
+async function loadInfo() {
+  S.info = await api("/api/info");
+  const st = $("status"); st.innerHTML = "";
+  if (S.info.demo) st.append(el("span", { class: "badge", text: "DEMO · random numbers" }));
+  st.append(el("span", {}, "device ", el("b", { text: S.info.device })),
+    el("span", {}, "tokenizer ", el("b", { text: S.info.tokenizer.path.split("/").slice(-2).join("/") }), ` (${S.info.tokenizer.vocab_size})`),
+    el("span", {}, "code ", el("b", { text: S.info.commit || "?" }), S.info.dirty ? " +changes" : ""));
+}
+async function loadCkpts(refresh = false) {
+  S.ckpts = await api("/api/checkpoints" + (refresh ? "?refresh=1" : ""));
+  if (!S.primary || !S.ckpts.find((c) => c.id === S.primary)) {
+    const finals = S.ckpts.filter((c) => c.name === "final");
+    S.primary = (finals[0] || S.ckpts[S.ckpts.length - 1] || {}).id || null;
+  }
+  renderCkpts(); renderMeta();
+  for (const c of S.ckpts) { if (!S.meta[c.id]) { try { S.meta[c.id] = await api("/api/meta?id=" + encodeURIComponent(c.id)); } catch (e) { S.meta[c.id] = { error: e.message }; } renderCkpts(); if (c.id === S.primary) renderMeta(); } }
+}
+function renderCkpts() {
+  const box = $("ckpts"); box.innerHTML = "";
+  if (!S.ckpts.length) { box.append(el("div", { class: "hint", text: "No checkpoints found. Start the server with --runs <dir>." })); return; }
+  const runs = {};
+  for (const c of S.ckpts) (runs[c.run] = runs[c.run] || []).push(c);
+  for (const [run, list] of Object.entries(runs)) {
+    const r = el("div", { class: "run" }, el("div", { class: "run-name", text: run }));
+    for (const c of list) {
+      const m = S.meta[c.id] || {};
+      const step = m.step ?? c.step_from_name;
+      const phase = m.train && m.train.phase;
+      const cb = el("input", { type: "checkbox", title: "compare" });
+      cb.checked = S.compare.has(c.id); cb.disabled = c.id === S.primary;
+      cb.addEventListener("click", (ev) => { ev.stopPropagation(); cb.checked ? S.compare.add(c.id) : S.compare.delete(c.id); });
+      const sub = el("span", { class: "ck-sub" }, step !== undefined && step !== null ? `${(step / 1000).toFixed(step % 1000 ? 1 : 0)}k` : "",
+        phase ? el("span", { class: "pill " + phase, text: phase === "cooldown" ? `cool ×${f(m.train.lr_factor, 2)}` : phase }) : "",
+        m.warnings && m.warnings.length ? el("span", { class: "pill", style: "color:var(--accent)", text: "!" }) : "");
+      const row = el("div", { class: "ck" + (c.id === S.primary ? " primary" : ""), title: c.id }, cb, el("span", { class: "ck-name", text: c.name }), sub);
+      row.addEventListener("click", () => { S.primary = c.id; S.compare.delete(c.id); renderCkpts(); renderMeta(); });
+      r.append(row);
+    }
+    box.append(r);
+  }
+}
+function renderMeta() {
+  const box = $("meta"); box.innerHTML = "";
+  if (!S.primary) return;
+  const m = S.meta[S.primary];
+  box.append(el("h3", { text: "Selected" }));
+  if (!m) { box.append(el("div", { class: "hint", text: "reading checkpoint…" })); return; }
+  if (m.error) { box.append(el("div", { class: "warn", text: m.error })); return; }
+  const md = m.model || {}, tr = m.train || {}, d = m.data || {};
+  const rows = [
+    ["run", m.run], ["file", m.name], ["step", m.step?.toLocaleString()],
+    ["arch", `${md.arch}${md.qk_norm ? " + QK-norm" : ""}`],
+    ["shape", `${md.n_layers}L × ${md.d_model}, ${md.n_heads}h / ${md.n_kv_heads} kv`],
+    ["ffn", `${md.ffn_type} ${md.d_ff}`], ["params", m.n_params ? (m.n_params / 1e6).toFixed(1) + "M" : "–"],
+    ["tied", String(md.tie_word_embeddings)], ["context", md.max_seq_len], ["vocab", m.vocab_size],
+    ["schedule", tr.schedule ? `${tr.schedule}, ${tr.optimizer}, peak ${tr.lr_peak}` : "–"],
+    ["phase", tr.phase ? `${tr.phase} (lr ×${f(tr.lr_factor, 3)})` : "–"],
+    ["cooldown", tr.cooldown_start != null ? `from ${tr.cooldown_start.toLocaleString()} of ${tr.max_steps?.toLocaleString()}` : "–"],
+    ["tokens", tr.tokens_seen ? (tr.tokens_seen / 1e9).toFixed(2) + "B" : "–"],
+    ["mix", d.mix ? JSON.stringify(d.mix) : "–"], ["cooldown mix", d.cooldown_mix ? JSON.stringify(d.cooldown_mix) : "–"],
+    ["shards", d.shards_dir || "–"], ["W&B", m.wandb_id || "–"],
+  ];
+  const dl = el("dl");
+  for (const [k, v] of rows) dl.append(el("dt", { text: k }), el("dd", { text: v ?? "–" }));
+  box.append(dl);
+  for (const w of m.warnings || []) box.append(el("div", { class: "warn", text: "⚠ " + w }));
+  for (const n of m.notes || []) box.append(el("div", { class: "note", text: n }));
+}
+function selected(multi) {
+  if (!S.primary) throw new Error("select a checkpoint on the left");
+  return multi ? [S.primary, ...[...S.compare].filter((c) => c !== S.primary)] : [S.primary];
+}
+async function save(kind, btn, out, nameEl) {
+  const rid = S.records[kind]; if (!rid) return;
+  btn.disabled = true;
+  try { const r = await api("/api/save", { record_id: rid, name: nameEl ? nameEl.value : undefined }); out.textContent = "saved: " + r.path; }
+  catch (e) { out.textContent = e.message; } finally { btn.disabled = false; }
+}
+
+// ── Complete ─────────────────────────────────────────────────────────────────
+const G = { res: null, pinned: null, hist: [] };
+function genRequest(extra = {}) {
+  return {
+    ckpt: selected(false)[0], prompt: $("g-prompt").value, bos: $("g-bos").checked, clean: $("g-clean").checked,
+    max_new_tokens: +$("g-max").value, greedy: $("g-greedy").checked, temperature: +$("g-temp").value,
+    top_k: +$("g-topk").value, top_p: +$("g-topp").value, repetition_penalty: +$("g-rep").value,
+    seed: $("g-seed").value === "" ? null : +$("g-seed").value, ...extra,
+  };
+}
+async function runGen(extra) {
+  await busy($("g-run"), $("g-err"), async () => {
+    const res = await api("/api/generate", genRequest(extra));
+    G.res = res; G.pinned = null; S.records.generate = res.record_id;
+    G.hist.unshift({ ckpt: res.ckpt, text: res.text, seed: res.seed, prompt: res.prompt_segments.filter((s) => !s.special).map((s) => s.text).join("") });
+    renderGen(); renderHist();
+  });
+}
+function renderGen() {
+  const res = G.res, out = $("g-out"); out.innerHTML = "";
+  const gen = res.run.generated, ps = res.run.prompt_tokens;
+  res.prompt_segments.forEach((seg, i) => {
+    const s = tokenSpan(seg, "prompt");
+    const st = ps[i];
+    if (st) { s.style.textDecoration = `underline 2px ${bitsShade(st.nll)}`; s.style.textUnderlineOffset = "4px"; }
+    s.addEventListener("mouseenter", (ev) => showTip(ev, el("div", {}, el("div", { class: "kv", text: "prompt token" }), statLine(st))));
+    s.addEventListener("mousemove", moveTip); s.addEventListener("mouseleave", hideTip);
+    out.append(s);
+  });
+  res.segments.forEach((seg, i) => {
+    const st = gen[i];
+    const s = tokenSpan(seg, "click"); s.style.background = bitsShade(st.nll);
+    if (G.pinned === i) s.classList.add("pinned");
+    s.addEventListener("mouseenter", (ev) => showTip(ev, el("div", {}, statLine(st), altList(st.top, res.labels, st.id))));
+    s.addEventListener("mousemove", moveTip); s.addEventListener("mouseleave", hideTip);
+    s.addEventListener("click", () => { G.pinned = i; renderGen(); });
+    out.append(s);
+  });
+  const nll = gen.reduce((a, s) => a + s.nll, 0);
+  $("g-stats").textContent = `${label(res.ckpt)} · ${gen.length} tokens · ${f(nll / LN2 / Math.max(1, gen.length), 2)} bits/token on its own output · ${res.tokens_per_second ?? "–"} tok/s · seed ${res.seed}` + (res.cropped ? ` · prompt cropped by ${res.cropped} tokens to fit the context` : "");
+  legend($("g-legend"), "bits");
+  $("g-extend").disabled = false; $("g-save").disabled = false; $("g-saved").textContent = "";
+  renderInspector();
+}
+function renderInspector() {
+  const box = $("g-insp"), res = G.res; box.innerHTML = "";
+  if (G.pinned === null || !res) { box.className = "inspector empty"; box.textContent = "Click a token to pin it."; return; }
+  box.className = "inspector";
+  const i = G.pinned, st = res.run.generated[i];
+  box.append(el("h3", { text: `token ${i + 1} of ${res.run.generated.length}` }),
+    el("div", { style: "font: 20px var(--serif); margin: 2px 0 6px; white-space: pre", text: JSON.stringify(segText(res.segments[i])).slice(1, -1) }),
+    statLine(st), el("div", { class: "hint", text: "Click an alternative to continue from it instead:" }),
+    altList(st.top, res.labels, st.id, (alt) => {
+      const ids = [...res.prompt_ids, ...res.run.generated.slice(0, i).map((g) => g.id), alt];
+      runGen({ ids });
+    }));
+}
+function renderHist() {
+  const box = $("g-hist"); box.innerHTML = ""; box.className = "";
+  for (const h of G.hist.slice(0, 12)) {
+    box.append(el("div", { style: "border-top:1px solid var(--rule); padding:6px 0; font: 14px/1.5 var(--serif)" },
+      el("span", { class: "kv", text: `${label(h.ckpt)} · seed ${h.seed}  ` }), el("span", { style: "color:var(--muted)", text: h.prompt.slice(-60) }), h.text));
+  }
+}
+$("g-run").addEventListener("click", () => runGen());
+$("g-extend").addEventListener("click", () => { if (G.res) runGen({ ids: [...G.res.prompt_ids, ...G.res.run.generated.map((g) => g.id)] }); });
+$("g-save").addEventListener("click", () => save("generate", $("g-save"), $("g-saved")));
+
+// ── Score & diff ─────────────────────────────────────────────────────────────
+let SC = null;
+$("s-run").addEventListener("click", () => busy($("s-run"), $("s-err"), async () => {
+  SC = await api("/api/score", { ckpts: selected(true), text: $("s-text").value, bos: $("s-bos").checked, clean: $("s-clean").checked, topk: +$("s-topk").value });
+  S.records.score = SC.record_id; $("s-save").disabled = false; $("s-saved").textContent = "";
+  const ids = Object.keys(SC.runs), mode = $("s-mode"); mode.innerHTML = "";
+  for (const c of ids) mode.append(el("option", { value: "s:" + c, text: `surprisal · ${label(c)}` }));
+  for (const c of ids.slice(1)) {
+    mode.append(el("option", { value: "d:" + c, text: `Δ ${label(c)} − ${label(ids[0])}` }));
+    mode.append(el("option", { value: "r:" + c, text: `Δ ${label(ids[0])} − ${label(c)}` }));
+  }
+  if (ids.length > 1) mode.value = "d:" + ids[1];
+  $("s-view").style.display = ""; renderScore();
+}));
+$("s-mode").addEventListener("change", () => renderScore());
+$("s-save").addEventListener("click", () => save("score", $("s-save"), $("s-saved")));
+function renderScore() {
+  const ids = Object.keys(SC.runs), base = ids[0];
+  const tab = el("table", { class: "data" }, el("tr", {}, ...["checkpoint", "step", "bits/byte", "bits/token", "tokens scored", "nats"].map((h, i) => el("th", { class: i ? "" : "l", text: h }))));
+  const best = Math.min(...ids.map((c) => SC.runs[c].bits_per_byte));
+  for (const c of ids) { const r = SC.runs[c]; tab.append(el("tr", { class: r.bits_per_byte === best && ids.length > 1 ? "best" : "" }, el("td", { class: "l", text: label(c) }), el("td", { text: r.step?.toLocaleString() }), el("td", { text: f(r.bits_per_byte, 4) }), el("td", { text: f(r.bits_per_token, 3) }), el("td", { text: r.n_scored }), el("td", { text: f(r.nll_nats, 2) }))); }
+  $("s-summary").innerHTML = ""; $("s-summary").append(tab, el("div", { class: "kv", text: `${SC.n_bytes} bytes, ${SC.segments.length} tokens (${f(SC.n_bytes / SC.segments.length, 2)} bytes/token); one passage is not an evaluation — use the scorer on a document set for that.` }));
+  const [kind, who] = $("s-mode").value.split(/:(.*)/s);
+  const [from, to] = kind === "r" ? [who, base] : [base, who];     // Δ = to − from
+  const out = $("s-out"); out.innerHTML = ""; out.style.display = "";
+  SC.segments.forEach((seg, i) => {
+    const s = tokenSpan(seg);
+    const a = SC.runs[from].tokens[i], b = SC.runs[to].tokens[i];
+    if (kind === "s") { if (b) s.style.background = bitsShade(b.nll); else s.classList.add("unscored"); }
+    else if (a && b) s.style.background = diffShade(b.nll - a.nll);
+    s.addEventListener("mouseenter", (ev) => {
+      const box = el("div");
+      for (const c of ids) { const t = SC.runs[c].tokens[i]; box.append(el("div", { class: "kv", style: "margin-top:6px; color:var(--ink)", text: label(c) }), statLine(t)); if (t && c === to) box.append(altList(t.top, SC.labels, seg.id)); }
+      if (kind !== "s" && a && b) box.prepend(el("div", { class: "kv" }, "Δ ", el("b", { text: `${f((b.nll - a.nll) / LN2, 2)} bits` })));
+      showTip(ev, box);
+    });
+    s.addEventListener("mousemove", moveTip); s.addEventListener("mouseleave", hideTip);
+    out.append(s);
+  });
+  legend($("s-legend"), kind === "s" ? "bits" : "diff");
+  renderDiff(kind === "s" ? null : from, to);
+}
+function renderDiff(base, who) {
+  const box = $("s-diff"); box.innerHTML = "";
+  if (!base) return;
+  const d = SC.segments.map((seg, i) => { const a = SC.runs[base].tokens[i], b = SC.runs[who].tokens[i]; return a && b ? (b.nll - a.nll) / LN2 : null; });
+  // cumulative chart
+  const W = 760, H = 150, P = 34;
+  let cum = 0; const pts = d.map((v) => (cum += v || 0));
+  const lo = Math.min(0, ...pts), hi = Math.max(0, ...pts), n = Math.max(1, pts.length - 1);
+  const X = (i) => P + (W - P - 8) * i / n, Y = (v) => 8 + (H - 30) * (hi - v) / ((hi - lo) || 1);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("class", "chart"); svg.style.width = "100%"; svg.style.maxWidth = W + "px";
+  const path = pts.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("");
+  svg.innerHTML = `<line class="axis" x1="${P}" x2="${W - 8}" y1="${Y(0)}" y2="${Y(0)}"/>
+    <path d="${path}" fill="none" stroke="rgb(${getVar("--cool")})" stroke-width="1.6"/>
+    <text x="${P - 4}" y="${Y(hi) + 4}" text-anchor="end">${Math.round(hi) || 0}</text><text x="${P - 4}" y="${Y(lo) + 4}" text-anchor="end">${Math.round(lo) || 0}</text>
+    <text x="${P}" y="${H - 6}">token 1</text><text x="${W - 8}" y="${H - 6}" text-anchor="end">token ${pts.length}</text>`;
+  box.append(el("h3", { style: "margin-top:18px", text: `Cumulative Δ bits, ${label(who)} − ${label(base)} (down = ${label(who)} better)` }), svg);
+  // largest per-token changes and per-token-string totals
+  const idx = d.map((v, i) => [v, i]).filter(([v]) => v !== null);
+  const by = {};
+  for (const [v, i] of idx) { const k = SC.segments[i].text; (by[k] = by[k] || [0, 0])[0] += v; by[k][1]++; }
+  const mk = (title, rows, fmt) => { const t = el("table", { class: "data" }, el("tr", {}, el("th", { class: "l", text: title }), el("th", { text: "Δ bits" }), el("th", { text: "n" }))); for (const r of rows) t.append(fmt(r)); return t; };
+  const tokRow = ([v, i]) => el("tr", {}, el("td", { class: "l serif", text: JSON.stringify(SC.segments[i].text).slice(1, -1) + "  ·  …" + SC.segments.slice(Math.max(0, i - 4), i).map((s) => s.text).join("").slice(-24) }), el("td", { text: f(v, 2) }), el("td", { text: "" }));
+  const strRow = ([k, [v, c]]) => el("tr", {}, el("td", { class: "l serif", text: JSON.stringify(k).slice(1, -1) }), el("td", { text: f(v, 2) }), el("td", { text: c }));
+  const sorted = idx.slice().sort((a, b) => a[0] - b[0]);
+  const strs = Object.entries(by).sort((a, b) => a[1][0] - b[1][0]);
+  box.append(el("div", { class: "row", style: "align-items:flex-start; gap:30px" },
+    el("div", {}, el("h3", { text: `largest gains (${label(who)})` }), mk("token  ·  context", sorted.slice(0, 10), tokRow)),
+    el("div", {}, el("h3", { text: "largest losses" }), mk("token  ·  context", sorted.slice(-10).reverse(), tokRow)),
+    el("div", {}, el("h3", { text: "summed by token" }), mk("token", strs.slice(0, 8).concat(strs.slice(-4).reverse()), strRow))));
+}
+
+// ── Lens ─────────────────────────────────────────────────────────────────────
+let LN = null;
+$("l-run").addEventListener("click", () => busy($("l-run"), $("l-err"), async () => {
+  LN = await api("/api/lens", { ckpt: selected(false)[0], text: $("l-text").value, bos: $("l-bos").checked, clean: $("l-clean").checked });
+  S.records.lens = LN.record_id; $("l-save").disabled = false; $("l-saved").textContent = ""; renderLens();
+}));
+$("l-color").addEventListener("change", () => LN && renderLens());
+$("l-save").addEventListener("click", () => save("lens", $("l-save"), $("l-saved")));
+function renderLens() {
+  const mode = $("l-color").value, T = LN.n_positions, L = LN.layers.length;
+  const tab = el("table"); const head = el("tr", {}, el("th", { class: "layer", text: "input" }));
+  LN.segments.forEach((s) => head.append(el("th", { text: segText(s) })));
+  tab.append(el("thead", {}, head));
+  const body = el("tbody");
+  // first layer at which the true next token is top-1 and stays top-1
+  const settle = Array.from({ length: T }, (_, t) => { let k = null; for (let l = L - 1; l >= 0; l--) { if (LN.layers[l].rank_target[t] === 1) k = l; else break; } return k; });
+  for (let l = L - 1; l >= 0; l--) {
+    const layer = LN.layers[l], tr = el("tr", {}, el("th", { class: "layer", text: layer.name }));
+    for (let t = 0; t < T; t++) {
+      const [tid, tp] = layer.top[t][0];
+      const td = el("td", { text: LN.labels[tid] ?? "" });
+      const pt = layer.p_target[t];
+      td.style.background = mode === "p" ? (pt === null ? "transparent" : cool(pt)) : mode === "top" ? cool(tp) : warm(layer.entropy[t] / Math.log(32132));
+      if (settle[t] === l) td.style.boxShadow = `inset 0 -2px 0 rgb(${getVar("--warm")})`;
+      td.addEventListener("mouseenter", (ev) => {
+        const next = t + 1 < T ? LN.segments[t + 1] : null;
+        showTip(ev, el("div", {}, el("div", { class: "kv" }, `${layer.name} · position ${t} · next `, el("b", { text: next ? JSON.stringify(segText(next)).slice(1, -1) : "–" })),
+          el("div", { class: "kv" }, "p(next) ", el("b", { text: pt === null ? "–" : pct(pt) }), "  rank ", el("b", { text: layer.rank_target[t] ?? "–" }), "  entropy ", el("b", { text: f(layer.entropy[t] / LN2, 2) + " bits" })),
+          altList(layer.top[t], LN.labels, next ? next.id : null)));
+      });
+      td.addEventListener("mousemove", moveTip); td.addEventListener("mouseleave", hideTip);
+      tr.append(td);
+    }
+    body.append(tr);
+  }
+  tab.append(body);
+  const foot = el("tr", {}, el("th", { class: "layer", text: "next" }));
+  for (let t = 0; t < T; t++) foot.append(el("th", { text: t + 1 < T ? segText(LN.segments[t + 1]) : "" }));
+  tab.append(el("tfoot", {}, foot));
+  const box = $("l-out"); box.innerHTML = ""; box.append(tab); box.style.display = "";
+  const settled = settle.filter((x) => x !== null);
+  $("l-stats").textContent = `${label(LN.ckpt)} · ${T} positions${LN.truncated ? ` (text cut, ${LN.truncated} tokens beyond the lens limit)` : ""} · next token top-1 at the output for ${settled.length}/${T - 1} positions · underline: first layer from which it stays top-1 · check: last layer vs model output, max |Δp| = ${f(LN.check.last_layer_vs_model_max_abs_prob_diff, 5)}`;
+  legend($("l-legend"), mode === "ent" ? "ent" : "p");
+}
+
+// ── Attention ────────────────────────────────────────────────────────────────
+const A = { res: null, head: 0, layer: null, query: null };
+async function runAttn(layer) {
+  await busy($("a-run"), $("a-err"), async () => {
+    A.res = await api("/api/attention", { ckpt: selected(false)[0], text: $("a-text").value, bos: $("a-bos").checked, clean: $("a-clean").checked, layer });
+    A.layer = A.res.layer; A.query = null; renderAttn();
+  });
+}
+$("a-run").addEventListener("click", () => runAttn(A.layer));
+$("a-metric").addEventListener("change", () => A.res && renderAttn());
+function renderAttn() {
+  const r = A.res, metric = $("a-metric").value, H = r.n_heads;
+  const grid = el("div", { class: "heads", style: `grid-template-columns: 30px repeat(${H}, 22px)` });
+  grid.append(el("div", { class: "lab" }));
+  for (let h = 0; h < H; h++) grid.append(el("div", { class: "lab", text: h }));
+  for (const row of r.summary.slice().reverse()) {
+    grid.append(el("div", { class: "lab", text: "L" + (row.layer + 1) }));
+    row[metric].forEach((v, h) => {
+      const c = el("div", { class: row.layer === r.layer && h === A.head ? "sel" : "", style: `background:${metric === "entropy_rel" ? warm(v) : cool(v)}` });
+      c.addEventListener("mouseenter", (ev) => showTip(ev, el("div", { class: "kv" }, `L${row.layer + 1} head ${h}: `, el("b", { text: f(v, 3) }))));
+      c.addEventListener("mousemove", moveTip); c.addEventListener("mouseleave", hideTip);
+      c.addEventListener("click", () => { A.head = h; if (row.layer !== r.layer) runAttn(row.layer); else renderAttn(); });
+      grid.append(c);
+    });
+  }
+  $("a-heads").innerHTML = ""; $("a-heads").append(grid);
+  $("a-sumlab").textContent = `${label(r.ckpt)} · ${metric.replace("_", " ")} per head (mean over positions) · ${r.segments.length} tokens${r.truncated ? `, ${r.truncated} cut` : ""}`;
+  drawPattern(); renderAttnText();
+}
+function drawPattern() {
+  const r = A.res, pat = r.patterns[A.head], T = pat.length, cell = Math.max(2, Math.min(7, Math.floor(560 / T)));
+  const cv = $("a-canvas"); cv.width = T * cell; cv.height = T * cell; cv.style.display = "";
+  const ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
+  const [cr, cg, cb] = getVar("--cool").split(",").map(Number);
+  for (let q = 0; q < T; q++) for (let k = 0; k <= q; k++) {
+    const v = pat[q][k]; if (v < 0.005) continue;
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${Math.min(1, 0.1 + 0.9 * Math.sqrt(v))})`; ctx.fillRect(k * cell, q * cell, cell, cell);
+  }
+  if (A.query !== null) { ctx.strokeStyle = `rgb(${getVar("--warm")})`; ctx.strokeRect(0.5, A.query * cell + 0.5, (A.query + 1) * cell, cell - 1); }
+  cv.onmousemove = (ev) => { const q = Math.floor(ev.offsetY / cell); if (q >= 0 && q < T && q !== A.query) { A.query = q; drawPattern(); renderAttnText(); } };
+  $("a-patlab").textContent = `L${r.layer + 1} head ${A.head} · rows: query position, columns: key position · hover a row`;
+}
+function renderAttnText() {
+  const r = A.res, box = $("a-textview"); box.innerHTML = ""; box.style.display = "";
+  const w = A.query !== null ? r.patterns[A.head][A.query] : null;
+  r.segments.forEach((seg, i) => {
+    const s = tokenSpan(seg, "click");
+    if (w) s.style.background = cool(Math.sqrt(w[i] || 0));
+    if (i === A.query) s.classList.add("pinned");
+    s.addEventListener("mouseenter", () => { A.query = i; drawPattern(); renderAttnText(); });
+    box.append(s);
+  });
+  if (A.query !== null) box.prepend(el("div", { class: "kv", text: `where position ${A.query} attends (shading: square root of the weight)` }));
+}
+
+// ── Probes ───────────────────────────────────────────────────────────────────
+$("c-run").addEventListener("click", () => busy($("c-run"), $("c-err"), async () => {
+  const choices = $("c-choices").value.split("\n").filter((x) => x.length);
+  const res = await api("/api/candidates", { ckpts: selected(true), prompt: $("c-prompt").value, choices, clean: $("c-clean").checked });
+  const ids = Object.keys(res.runs);
+  const t = el("table", { class: "data" }, el("tr", {}, el("th", { class: "l", text: "continuation" }), el("th", { text: "tokens" }),
+    ...ids.flatMap((c) => [el("th", { text: `rank · ${shortName(c)}` }), el("th", { text: "bits" }), el("th", { text: "bits/byte" })])));
+  res.choices.forEach((ch, i) => t.append(el("tr", {}, el("td", { class: "l serif", text: JSON.stringify(ch.text).slice(1, -1) + (ch.boundary_merge ? "  ⚠ token spans the boundary" : "") }), el("td", { text: ch.n_tokens }),
+    ...ids.flatMap((c) => { const r = res.runs[c].rows[i]; return [el("td", { text: r.rank, style: r.rank === 1 ? "font-weight:600" : "" }), el("td", { text: f(r.nll_cond / LN2, 2) }), el("td", { text: f(r.bits_per_byte_cond, 3) })]; }))));
+  $("c-out").innerHTML = ""; $("c-out").append(t, el("div", { class: "kv", text: "bits = −log₂ p(continuation | prompt), from the total loss of prompt + continuation minus that of the prompt. Rank 1 = most likely." }));
+}));
+$("p-file").addEventListener("change", async (ev) => { const file = ev.target.files[0]; if (file) $("p-jsonl").value = await file.text(); if (file && !$("p-name").value) $("p-name").value = file.name.replace(/\.[^.]+$/, ""); });
+$("p-save").addEventListener("click", () => save("probeset", $("p-save"), $("p-saved"), $("p-name")));
+$("p-run").addEventListener("click", () => busy($("p-run"), $("p-err"), async () => {
+  const res = await api("/api/probeset", { ckpts: selected(true), jsonl: $("p-jsonl").value, clean: $("p-clean").checked });
+  S.records.probeset = res.record_id; $("p-save").disabled = false; $("p-saved").textContent = "";
+  const ids = Object.keys(res.summary), out = $("p-out"); out.innerHTML = "";
+  const groups = [...new Set(ids.flatMap((c) => Object.keys(res.summary[c])))];
+  const t = el("table", { class: "data" }, el("tr", {}, el("th", { class: "l", text: "group" }), el("th", { class: "l", text: "checkpoint" }), el("th", { text: "pairs" }), el("th", { text: "prefers a (total)" }), el("th", { text: "prefers a (per byte)" }), el("th", { text: "choices" }), el("th", { text: "accuracy" }), el("th", { text: "mean rank" })));
+  for (const g of groups) for (const c of ids) {
+    const s = res.summary[c][g]; if (!s) continue;
+    t.append(el("tr", {}, el("td", { class: "l", text: g }), el("td", { class: "l", text: label(c) }), el("td", { text: s.pairs || "" }), el("td", { text: s.pairs ? pct(s.share_prefers_a_total) : "" }), el("td", { text: s.pairs ? pct(s.share_prefers_a_per_byte) : "" }), el("td", { text: s.choices || "" }), el("td", { text: s.with_answer ? pct(s.accuracy) : "" }), el("td", { text: s.with_answer ? f(s.mean_answer_rank, 2) : "" })));
+  }
+  out.append(el("div", { class: "kv", text: `${res.n_pairs} pairs, ${res.n_choices} choice items. Shares over a handful of items carry wide uncertainty.` }), t);
+  const rows = el("table", { class: "data" }, el("tr", {}, el("th", { class: "l", text: "id" }), el("th", { class: "l", text: "item" }), ...ids.map((c) => el("th", { text: shortName(c) }))));
+  for (const r of res.rows) {
+    const item = r.kind === "pair" ? `a: ${r.a}  |  b: ${r.b}` : `${r.prompt} → ${r.choices.map((c, i) => (i === r.answer ? "[" + c.trim() + "]" : c.trim())).join(" / ")}`;
+    rows.append(el("tr", {}, el("td", { class: "l", text: r.id }), el("td", { class: "l serif", style: "max-width:520px", text: item }),
+      ...ids.map((c) => { const b = r.by_ckpt[c]; if (!b) return el("td", { text: "–" }); return el("td", { text: r.kind === "pair" ? (b.prefers_a_total ? "a" : "b") + ` (${f((b.nll_b - b.nll_a) / LN2, 1)})` : (b.answer_rank !== undefined ? `rank ${b.answer_rank}` : b.ranks.join(",")) }); })));
+  }
+  out.append(el("h3", { style: "margin-top:14px", text: "Items (pairs: preferred, with bits b − a)" }), rows);
+}));
+
+// ── tabs, theme, start ───────────────────────────────────────────────────────
+$("tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  for (const x of $("tabs").children) x.classList.toggle("on", x === b);
+  for (const p of document.querySelectorAll(".pane")) p.classList.toggle("on", p.id === "pane-" + b.dataset.pane);
+});
+function setTheme(dark) { document.documentElement.classList.toggle("dark", dark); for (const k in varCache) delete varCache[k]; $("theme").textContent = dark ? "light" : "dark"; try { localStorage.setItem("probe-theme", dark ? "dark" : "light"); } catch (e) {} }
+$("theme").addEventListener("click", () => setTheme(!document.documentElement.classList.contains("dark")));
+try { if (localStorage.getItem("probe-theme") === "dark") setTheme(true); } catch (e) {}
+$("refresh").addEventListener("click", () => loadCkpts(true));
+(async () => {
+  try { await loadInfo(); await loadCkpts(); } catch (e) { $("status").textContent = "server error: " + e.message; }
+})();
+</script>
+</body>
+</html>
