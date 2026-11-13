@@ -369,6 +369,23 @@ def phase_at(step: int, cfg: FullConfig) -> int:
 
 # ── WandB ─────────────────────────────────────────────────────────────────────
 
+def resume_wandb_id(ckpt: dict, resume_path: Optional[str], output_dir: str) -> Optional[str]:
+    """The W&B run to continue, or None for a new run.
+
+    Continuing a run means resuming from a checkpoint of this output directory. A checkpoint
+    from another directory is the start of a branch (a cooldown branched off a stable run,
+    for instance): it must get its own W&B run. Reusing the id would rename the original run,
+    overwrite its config, and have every logged step refused as older than the original's last.
+    """
+    if not resume_path or not ckpt.get("wandb_id"):
+        return None
+    try:
+        Path(resume_path).resolve().relative_to(Path(output_dir).resolve())
+    except ValueError:
+        return None
+    return ckpt["wandb_id"]
+
+
 def setup_wandb(cfg: FullConfig, model: nn.Module, run_id: Optional[str] = None):
     if not cfg.logging.use_wandb:
         return None
@@ -654,7 +671,8 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
         return metrics
 
     # WandB
-    wandb_run = setup_wandb(cfg, raw_model, run_id=ckpt.get("wandb_id"))
+    wandb_run = setup_wandb(cfg, raw_model,
+                            run_id=resume_wandb_id(ckpt, resume, cfg.training.output_dir))
 
     def checkpoint(tag=""):
         extra = {"scaler": scaler.state_dict(), "rng_after_init": True, **rng_state(),

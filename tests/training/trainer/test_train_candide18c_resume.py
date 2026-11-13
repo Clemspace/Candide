@@ -270,6 +270,20 @@ def test_branch_cooldown_from_stable_checkpoint(tmp_path):
     assert final["step"] == 5 and final["cooldown_start"] == 3
 
 
+def test_a_branch_gets_its_own_wandb_run(tmp_path):
+    """Resuming inside the output directory continues the W&B run; a checkpoint from elsewhere starts a new one."""
+    out = tmp_path / "runs" / "branch"
+    own = out / "checkpoints" / "step_3.pt"
+    other = tmp_path / "runs" / "stable" / "checkpoints" / "step_3.pt"
+    ckpt = {"wandb_id": "abc123"}
+    assert script.resume_wandb_id(ckpt, str(own), str(out)) == "abc123"
+    assert script.resume_wandb_id(ckpt, str(other), str(out)) is None
+    assert script.resume_wandb_id(ckpt, None, str(out)) is None
+    assert script.resume_wandb_id({}, str(own), str(out)) is None
+    # a sibling directory whose name merely starts the same way is not the same run
+    assert script.resume_wandb_id(ckpt, str(tmp_path / "runs" / "branch2" / "checkpoints" / "s.pt"), str(out)) is None
+
+
 def test_extra_val_metrics_reach_final_summary(tmp_path, monkeypatch):
     _shards(tmp_path / "main", 0)
     _shards(tmp_path / "enc", 1, n_tokens=600)
