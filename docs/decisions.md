@@ -260,6 +260,30 @@ released by ERC ModERN.
 - Pre-release: memorization probe (`scripts/memorization_probe.py`, "extracted") on the final
   checkpoint and on the 62,000 branch if run: more passes, more memorisation to check. **[pending]**
 
+### 4.9 Full run: result — 2026-11-11 09:45 to 2026-11-13 09:07
+- `results/2026-11-13/fullrun_v2g.json` (W&B run `qq2gik3r`, code `64aae80`). 95,000 steps, 6.23B tokens,
+  47.4 h; 37.1k tok/s while training, 36.5k with evaluation (1.5% overhead). No interruption, no
+  non-finite loss; gradient norm flat at 0.14 through the stable phase.
+- Final loss: **val 3.166, Encyclopédie vol. 17 2.371, canon 2.665**.
+- Prediction (4.8) against outcome: val 3.08 predicted, 3.166 observed (0.086 too optimistic;
+  Claude's 3.12 was 0.046 too optimistic); Encyclopédie 2.42 predicted, 2.371 observed; canon 2.70
+  predicted, 2.665 observed. Against the 500M-token run (4.7) val fell by 0.39, Encyclopédie by 0.31,
+  canon by 0.35: the objection raised before launch, that the two up-weighted sets should fall at
+  least as much as val, was wrong.
+- Shape of the run: the stable phase saturates. Val is 3.600 at step 48,000, 3.593 at 62,000 and
+  3.585 at 76,000: 0.016 nats for the last 28,000 stable steps (1.8B tokens, ~14 h). The cooldown
+  then gives 0.419 (val), 0.412 (Encyclopédie) and 0.443 (canon), against 0.247 for the 1,526-step
+  cooldown of 4.7. More than half of the improvement over the 500M-token run comes from the cooldown.
+- No sign of overfitting from the second pass: the gap between val and training loss stays at
+  0.04-0.05 through the stable phase, with no step at the start of the second pass (~step 44,000). It
+  widens to ~0.07-0.09 in the cooldown, when the training mix shifts to the two lower-loss sets, so
+  the widening is not evidence either way. The memorization probe is the test. **[pending]**
+- Check on the declared-causality change: val 4.108 at step 2,000, against 4.09 at the same step of
+  4.7 before the change. No leak of future tokens.
+- Not established by this run: one seed; no AdamW run and no 1.2e-3 run of this length.
+- Next (one experiment, prediction first): cooldown branched from step 62,000 to 77,500 (4.8), ~7.6 h.
+  It tests whether the last 14,000 stable steps bought anything. **[pending]**
+
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,
   validation set, shape all changed). Needed: bits per character on identical documents.
