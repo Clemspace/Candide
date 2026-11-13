@@ -99,6 +99,7 @@ def _as_dict(section) -> dict:
 
 def _torch_load(path: Path):
     import torch
+    trainer_module()            # before unpickling: the run pickled its config classes as __main__.*
     try:            # mmap: reading the config of a 2.7 GB checkpoint touches only the header
         return torch.load(path, map_location="cpu", weights_only=False, mmap=True)
     except (RuntimeError, TypeError, ValueError):

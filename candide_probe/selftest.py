@@ -97,4 +97,3 @@ def run(ckpt: str, tokenizer: str, device: str) -> int:
         print(f"{name:<46}{value:>12.3g}{limit:>10.3g}  {status}")
     print("\nall hard checks passed" if not failed else "\nSOME CHECKS FAILED")
     return 1 if failed else 0
-

@@ -106,7 +106,7 @@ def test_rebuilt_model_gives_the_same_logits(setup, cid):
 @pytest.mark.parametrize("bos", [True, False])
 def test_score_adds_up_to_score_text(setup, cid, bos):
     e, tok = setup["engine"], setup["tok"]
-    text = TEXT * 2                                  # several 64-token windows
+    text = TEXT * 8                                  # several 64-token windows
     res = e.score([cid], text, bos=bos, topk=3)
     run = res["runs"][cid]
     ids = tok.encode(res["text"])
@@ -188,7 +188,8 @@ def test_lens_last_layer_is_the_model_output(setup, cid):
 @pytest.mark.parametrize("cid", IDS)
 def test_attention_recording_is_exact(setup, cid):
     model, tok = setup["reg"].get(cid).model, setup["tok"]
-    x = torch.tensor([[tok.bos_id] + tok.encode(TEXT)[:40]])
+    x = torch.tensor([[tok.bos_id] + tok.encode(TEXT * 3)[:40]])
+    T = x.shape[1]
     with torch.no_grad():
         ref = model(x)
         with _AttentionRecorder(model) as rec:
@@ -198,8 +199,8 @@ def test_attention_recording_is_exact(setup, cid):
     assert torch.allclose(ref, got, atol=1e-5, rtol=1e-5)
     assert sorted(rec.weights) == [0, 1, 2]
     for w in rec.weights.values():
-        assert w.shape == (4, 41, 41)
-        assert torch.allclose(w.sum(-1), torch.ones(4, 41), atol=1e-5)
+        assert w.shape == (4, T, T)
+        assert torch.allclose(w.sum(-1), torch.ones(4, T), atol=1e-5)
         assert float(torch.triu(w, diagonal=1).abs().max()) == 0.0
     res = setup["engine"].attention(cid, TEXT, layer=1)
     assert res["layer"] == 1 and len(res["summary"]) == 3 and res["n_heads"] == 4
@@ -235,3 +236,28 @@ def test_registry_keeps_at_most_max_loaded(setup):
     reg.get(IDS[0])
     reg.get(IDS[1])
     assert reg.loaded_ids() == [IDS[1]]
+
+
+def test_checkpoint_pickled_by_the_trainer_as_main_loads(setup, tmp_path):
+    """train_candide18c.py runs as __main__, so its checkpoints pickle __main__.ModelConfig etc.
+    The loader must register those names before unpickling, in a process whose __main__ is
+    not the trainer (python -m candide_probe)."""
+    import __main__
+    T = C.trainer_module()
+    names = ("FullConfig", "ModelConfig", "TrainingConfig", "DataConfig", "LoggingConfig")
+    saved = {n: (getattr(T, n).__module__, getattr(__main__, n, None)) for n in names}
+    try:
+        for n in names:
+            getattr(T, n).__module__ = "__main__"
+            setattr(__main__, n, getattr(T, n))
+        _checkpoint(tmp_path / "runs" / "main", setup["tok"].vocab_size, "gpt", step=5)
+        for n in names:
+            delattr(__main__, n)                     # a fresh process: nothing registered yet
+        reg = C.Registry([tmp_path / "runs"], device="cpu")
+        assert reg.meta("main/step_5")["step"] == 5
+        assert reg.get("main/step_5").meta["n_params_built"] > 0
+    finally:
+        for n, (mod, attr) in saved.items():
+            getattr(T, n).__module__ = mod
+            if attr is not None:
+                setattr(__main__, n, attr)
