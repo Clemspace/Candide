@@ -672,7 +672,7 @@ def train(cfg: FullConfig, resume: Optional[str] = None):
 
     # WandB
     wandb_run = setup_wandb(cfg, raw_model,
-                            run_id=resume_wandb_id(ckpt, resume, cfg.training.output_dir))
+                            run_id=resume_wandb_id(ckpt, resume, cfg.logging.output_dir))
 
     def checkpoint(tag=""):
         extra = {"scaler": scaler.state_dict(), "rng_after_init": True, **rng_state(),
