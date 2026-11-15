@@ -1,0 +1,60 @@
+{
+ "source": "W&B export of 2026-11-14 09:44 UTC, run candide-v2g-224m-branch62k (id pjca2f5s), group full-v2g",
+ "description": "cooldown branched from step 62,000 of the full run (checkpoint step_62000.pt) to step 77,500; same config otherwise",
+ "code_commit": "8cef5fa",
+ "parent_run": "qq2gik3r",
+ "cooldown_start": 62000,
+ "steps": 77500,
+ "tokens": 5079040000,
+ "wall_hours": 7.8,
+ "tokens_per_sec_median": 37074,
+ "final": {
+  "val": 3.1855,
+  "enc": 2.3856,
+  "canon": 2.6801
+ },
+ "train_loss_last_3000_steps": 3.1048,
+ "val_curve": {
+  "64000": {
+   "val": 3.4904,
+   "enc": 2.6601,
+   "canon": 2.9671
+  },
+  "66000": {
+   "val": 3.4333,
+   "enc": 2.6112,
+   "canon": 2.9202
+  },
+  "68000": {
+   "val": 3.3894,
+   "enc": 2.5641,
+   "canon": 2.8704
+  },
+  "70000": {
+   "val": 3.3411,
+   "enc": 2.5236,
+   "canon": 2.8319
+  },
+  "72000": {
+   "val": 3.295,
+   "enc": 2.4833,
+   "canon": 2.7823
+  },
+  "74000": {
+   "val": 3.249,
+   "enc": 2.4425,
+   "canon": 2.7396
+  },
+  "76000": {
+   "val": 3.2055,
+   "enc": 2.4033,
+   "canon": 2.6991
+  },
+  "77500": {
+   "val": 3.1855,
+   "enc": 2.3856,
+   "canon": 2.6801
+  }
+ },
+ "note": "A first launch of this branch (2026-11-13 10:01) reused the W&B run of the full run: its steps were refused and the full run's W&B name and config were overwritten (W&B now shows max_steps 77500, cooldown_start 62000 and state 'killed' for run qq2gik3r). The full run's values in results/2026-11-13/fullrun_v2g.json were exported before that and are unaffected."
+}

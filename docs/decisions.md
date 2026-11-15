@@ -282,7 +282,28 @@ released by ERC ModERN.
   4.7 before the change. No leak of future tokens.
 - Not established by this run: one seed; no AdamW run and no 1.2e-3 run of this length.
 - Next (one experiment, prediction first): cooldown branched from step 62,000 to 77,500 (4.8), ~7.6 h.
-  It tests whether the last 14,000 stable steps bought anything. **[pending]**
+  It tests whether the last 14,000 stable steps bought anything. Done: 4.10.
+
+### 4.10 Shorter run branched from step 62,000 — 2026-11-13 11:16 to 19:04
+- `results/2026-11-14/branch62k_v2g.json` (W&B run `pjca2f5s`, code `8cef5fa`): cooldown from the full
+  run's checkpoint at step 62,000 to step 77,500 (5.08B tokens, 1.75 passes), 7.8 h.
+- Result: **val 3.186, Encyclopédie vol. 17 2.386, canon 2.680**, against 3.166 / 2.371 / 2.665 for
+  the full run: +0.020 / +0.014 / +0.015 with 18% fewer tokens.
+- Prediction: none written by Clément before launch (third time). Claude's, written 2026-11-13
+  10:22: within 0.02 of 3.166. Observed difference 0.0197: held, at the edge.
+- Reading: the 17,500 extra steps of the full run (1.15B tokens, 8.7 h) bought 0.020 nats. About
+  0.009 of it is the stable phase from 62,000 to 76,000; the rest is the longer cooldown (19,000
+  steps against 15,500; gain 0.419 against 0.408). Confirms 4.9: at 2.4e-3 the stable phase had
+  saturated by ~step 48,000 to 62,000.
+- Not tested: whether the same budget with an earlier or longer cooldown, or a lower stable rate,
+  would end lower than 3.166. That is the question for the next decoder run, and for the encoder
+  schedule.
+- Incident: the first launch (10:01) resumed the full run's W&B run (the id travels in the
+  checkpoint). Its steps were refused, and the full run's W&B name and config were overwritten; W&B
+  now shows run `qq2gik3r` as killed with max_steps 77,500. Fixed in `c4e9e32` + `8cef5fa` (a checkpoint
+  from another output directory starts a new W&B run). The full run's numbers were exported before
+  the incident and are unaffected.
+- Which checkpoint is released (95,000 or 77,500) is decided by the memorization probe on both. **[pending]**
 
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,
