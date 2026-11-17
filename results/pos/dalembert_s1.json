@@ -1,0 +1,246 @@
+{
+  "model": "hf:pjox/dalembert",
+  "pretraining_step": -1,
+  "protocol": {
+    "lr": 5e-06,
+    "head_lr": null,
+    "epochs": 10,
+    "batch_size": 16,
+    "warmup_frac": 0.1,
+    "weight_decay": 0.01,
+    "dropout": 0.1,
+    "pooling": "mean",
+    "max_words": 64,
+    "max_train_sentences": null,
+    "seed": 1
+  },
+  "data": {
+    "train": "/home/ccastellon/data/FreEMlpm/Models/Train_4/training_data/train/pos_full.tsv",
+    "dev": "/home/ccastellon/data/FreEMlpm/Models/Train_4/training_data/dev/pos_full.tsv",
+    "test_root": "/home/ccastellon/data/FreEMlpm/Data_outOfDomain",
+    "train_sentences": 7811,
+    "train_words": 132364,
+    "dev_words": 5493,
+    "skipped_lines": 0,
+    "tags": 50
+  },
+  "params_m": 111.2,
+  "dev": [
+    {
+      "epoch": 1,
+      "train_loss": 2.3550802423849184,
+      "dev_acc": 0.938467139996359
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.18016188595527763,
+      "dev_acc": 0.9679592208265064
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.10037544957059293,
+      "dev_acc": 0.9746950664482068
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.07595224440067336,
+      "dev_acc": 0.977607864554888
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.062287379326660695,
+      "dev_acc": 0.9801565628982342
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.054020882544159154,
+      "dev_acc": 0.9807027125432368
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.04757465455863922,
+      "dev_acc": 0.9812488621882396
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.04352061647887519,
+      "dev_acc": 0.9816129619515748
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.04110958435999302,
+      "dev_acc": 0.9825232113599126
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.03870527463791804,
+      "dev_acc": 0.9816129619515748
+    }
+  ],
+  "test_groups": {
+    "Data_outOfDomain_normalised/theatre_normalised/16": {
+      "acc": 0.9560702875399361,
+      "files": 10,
+      "words": 1252,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17": {
+      "acc": 0.9772554965883244,
+      "files": 10,
+      "words": 1319,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18": {
+      "acc": 0.9672619047619048,
+      "files": 10,
+      "words": 1344,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19": {
+      "acc": 0.9639509733237203,
+      "files": 10,
+      "words": 1387,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20": {
+      "acc": 0.9549678341672623,
+      "files": 10,
+      "words": 1399,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16": {
+      "acc": 0.9348630643967432,
+      "files": 10,
+      "words": 1351,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17": {
+      "acc": 0.9687022900763359,
+      "files": 10,
+      "words": 1310,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18": {
+      "acc": 0.9680777238029147,
+      "files": 10,
+      "words": 1441,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19": {
+      "acc": 0.9482631189948263,
+      "files": 10,
+      "words": 1353,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20": {
+      "acc": 0.9567486950037286,
+      "files": 10,
+      "words": 1341,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig": {
+      "acc": 0.9400958466453674,
+      "files": 10,
+      "words": 1252,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig": {
+      "acc": 0.9727065959059894,
+      "files": 10,
+      "words": 1319,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig": {
+      "acc": 0.9650297619047619,
+      "files": 10,
+      "words": 1344,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/19": {
+      "acc": 0.9639509733237203,
+      "files": 10,
+      "words": 1387,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_original/theatre_original/20": {
+      "acc": 0.9535382416011436,
+      "files": 10,
+      "words": 1399,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/16_orig": {
+      "acc": 0.9311621021465581,
+      "files": 10,
+      "words": 1351,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_original/varia_original/17_orig": {
+      "acc": 0.9671755725190839,
+      "files": 10,
+      "words": 1310,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_original/varia_original/18_orig": {
+      "acc": 0.9687716863289383,
+      "files": 10,
+      "words": 1441,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/19": {
+      "acc": 0.9467849223946785,
+      "files": 10,
+      "words": 1353,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/20": {
+      "acc": 0.9560029828486204,
+      "files": 10,
+      "words": 1341,
+      "unseen_tag_words": 1
+    }
+  },
+  "test_centuries": {
+    "normalised/16": {
+      "acc": 0.9450633883980023,
+      "words": 2603
+    },
+    "normalised/17": {
+      "acc": 0.9729935336629897,
+      "words": 2629
+    },
+    "normalised/18": {
+      "acc": 0.9676840215439856,
+      "words": 2785
+    },
+    "normalised/19": {
+      "acc": 0.9562043795620438,
+      "words": 2740
+    },
+    "normalised/20": {
+      "acc": 0.9558394160583942,
+      "words": 2740
+    },
+    "original/16": {
+      "acc": 0.9354590856703804,
+      "words": 2603
+    },
+    "original/17": {
+      "acc": 0.9699505515405097,
+      "words": 2629
+    },
+    "original/18": {
+      "acc": 0.9669658886894076,
+      "words": 2785
+    },
+    "original/19": {
+      "acc": 0.9554744525547445,
+      "words": 2740
+    },
+    "original/20": {
+      "acc": 0.9547445255474453,
+      "words": 2740
+    }
+  },
+  "seconds": 522,
+  "torch": "2.5.1+cu121"
+}

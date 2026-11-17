@@ -1,0 +1,112 @@
+# encoder_v2g.yaml — CandideEncoder (ModernBERT-base architecture) on the v2g corpus.
+#
+# Same model section as configs/encoder_modernbert18c.yaml except QK-norm and the vocabulary:
+# tokenizer v2g has 32,132 entries and its mask token is id 132 (checked against
+# the tokenizer at startup). Data, schedule and retention follow the decoder full
+# run (configs/full/gptplus_v2g.yaml). Optimizer: AdamW (Muon is not wired for the
+# encoder and has not been checked on masked-LM training).
+#
+# Third launch, 17 Nov 2026 (decisions 4.12). The first launch (lr 1e-3, no
+# QK-norm) had gradient-norm spikes from about step 25,000 and a loss spike at
+# 25,900. Changes, one reason each:
+#   qk_norm: true       RMSNorm on q and k, as in the decoder: bounds attention
+#                       logits, the usual cause of late spikes at high LR
+#   learning_rate 1e-3  winner of the LR check (val 3.466; 5e-4: 3.550,
+#                       2.5e-4: 3.866), kept: QK-norm is the fix for the
+#                       spikes. A second launch, at 5e-4 with QK-norm, was
+#                       stopped near step 1,000: 5e-4 is 0.083 behind.
+#   cooldown_frac 0.4   decoder branch from 48k (val 3.158 vs 3.166, 18% fewer
+#                       tokens): the longer cooldown wins at equal budget
+#   max_steps 52000     bench 52.7K tok/s at micro-batch 32, ~18.5 h with evals
+#
+# Smoke test:  PYTHONPATH=. python ramanujan/training/train_encoder18c.py \
+#                  --config configs/full/encoder_v2g.yaml --max-steps 30 --output-dir runs/enc/smoke
+# Bench:       same with --max-steps 300 --micro-batch {8,16,32}; read tok/s after step 100
+# Training sources: shards_v2g plus the Encyclopédie shards, which are a separate
+# source (not in shards_v2g). The weight 0.009 is the Encyclopédie's share of the
+# tokens (26.5M of 2.89B): it is read as often as the rest, no more. Volume 17
+# stays held out, as for the decoder, and is the extra validation set.
+
+model:
+  vocab_size: 32132
+  mask_token_id: 132
+  d_model: 768
+  n_layers: 22
+  n_heads: 12
+  n_kv_heads: null
+  attention_type: mha
+  d_ff: 1152
+  ffn_type: geglu
+  max_seq_len: 1024
+  dropout: 0.0
+  norm_first: true
+  norm_type: layer
+  norm_eps: 1.0e-5
+  norm_bias: false
+  embedding_norm: true
+  bias: false
+  use_rope: true
+  global_attn_every_n_layers: 3
+  local_attention: 128
+  rope_theta: 160000.0
+  local_rope_theta: 10000.0
+  head_bias: false
+  decoder_bias: true
+  add_pooler: false
+  init_scheme: megatron
+  qk_norm: true
+
+training:
+  max_steps: 52000
+  batch_size: 32
+  gradient_accumulation_steps: 2   # 64 x 1024 = 65,536 tokens per step, as the decoder
+  learning_rate: 1.0e-3
+  min_lr: 5.0e-5               # cosine only; unused with wsd
+  weight_decay: 0.01
+  grad_clip: 1.0
+  warmup_steps: 1000
+  schedule: wsd
+  cooldown_frac: 0.4            # cooldown from step 31,200
+  cooldown_shape: 1-sqrt
+  final_lr_ratio: 0.0
+  compile: true
+  mixed_precision: bf16
+  eval_every: 2000             # two validation sets per evaluation
+  eval_steps: null
+  save_every: 1000
+  keep_last: 2
+  # points of the downstream progression curve (multiples of save_every);
+  # pre_cooldown.pt and final.pt are kept as well
+  keep_steps: [1000, 2000, 5000, 10000, 20000, 30000, 40000]
+  log_every: 10
+  seed: 1
+  mlm_probability: 0.30
+  masking_strategy: token
+  sparse_prediction: true
+  val_mask_seed: 0
+
+data:
+  shards_dir: /data/pretrain_candide/shards_v2g     # source "main" + validation
+  sources:
+    enc: /data/pretrain_candide/shards_enc
+  mix: {main: 0.991, enc: 0.009}
+  extra_val:
+    enc: /data/pretrain_candide/shards_enc          # held-out volume 17
+  tokenizer_path: /data/pretrain_candide/tokenizer_v2g/tokenizer.json
+  sequence_length: 1024
+  num_workers: 2
+  prefetch_factor: 4
+  pin_memory: true
+  train_order: global
+  val_windows: 1600
+  val_seed: 0
+  pad_token_id: 1
+  never_mask_tokens: ["<|bos|>", "<|eos|>"]
+
+logging:
+  use_wandb: false
+  wandb_project: candide-18c
+  wandb_run_name: candide-encoder-v2g-qk
+  wandb_group: encoder-v2g
+  wandb_tags: [candide, 18c-french, encoder, mlm, modernbert-arch, v2g]
+  output_dir: ./runs/enc/candide-encoder-v2g-qk

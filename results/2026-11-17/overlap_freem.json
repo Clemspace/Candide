@@ -1,0 +1,860 @@
+{
+  "params": {
+    "test_root": "/data/FreEMlpm/Data_outOfDomain",
+    "manifest": "/data/pretrain_candide/dedup_v2g/dedup_manifest.csv",
+    "extra": "[PosixPath('/data/pretrain_candide/extracted_enc')]",
+    "k": "60",
+    "control": "10",
+    "max_unreadable": "0.01",
+    "only": "original",
+    "workers": "16",
+    "out": "results/2026-11-17/overlap_freem.json"
+  },
+  "corpus_files": 103927,
+  "missing_paths": 0,
+  "unreadable_files": 0,
+  "folded_chars_scanned": 8617315796,
+  "seconds": 207,
+  "files": {
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_PARDONNEUR_v.1500_orig.tsv": {
+      "windows": 419,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_PONTAUXANES_v.1500_orig.tsv": {
+      "windows": 345,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_RESURRECTIONJENINLANDORE_v.1500_orig.tsv": {
+      "windows": 351,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_SERMONJOYEUX_v.1500_orig.tsv": {
+      "windows": 342,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/BEZE_ABRAHAM_1550_orig.tsv": {
+      "windows": 416,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/GRINGORE_SAINT-LOUIS_1514_orig.tsv": {
+      "windows": 450,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_CLEOPATRE_1574_orig.tsv": {
+      "windows": 377,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_DIDON_1574_orig.tsv": {
+      "windows": 337,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_EUGENE_1574_orig.tsv": {
+      "windows": 383,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/TURNEBE_CONTENTS_1584.tsv": {
+      "windows": 288,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/AUBIGNAC_PUCELLE_1642_orig.tsv": {
+      "windows": 437,
+      "found": 1,
+      "share": 0.002288329519450801,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/theatre18_clean_AUBIGNAC_PUCELLE_PROSE_clean.txt",
+          1
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/CHAMPREPUS_ULYSSE_1603_orig.tsv": {
+      "windows": 460,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/CHAPPUZEAU_ARMETZAR_1656_orig.tsv": {
+      "windows": 371,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DESHOULIERES_GENSERIC_1680_orig.tsv": {
+      "windows": 389,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DESJARDINS_FAVORI_1665_orig.tsv": {
+      "windows": 432,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DURANT_OISIVETE_1699_orig.tsv": {
+      "windows": 496,
+      "found": 127,
+      "share": 0.2560483870967742,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/theatre18_clean_DURANT_OISIVETE_clean.txt",
+          127
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/MATHIEU_MAGICIENNEETRANGERE_1617_orig.tsv": {
+      "windows": 385,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/SCUDERY_LIGDAMONELIDIAS_1631_orig.tsv": {
+      "windows": 384,
+      "found": 24,
+      "share": 0.0625,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k56261696.txt",
+          24
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/URFE_SYLVANIRE_1627_orig.tsv": {
+      "windows": 339,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/VONDREBECK-ALARD_FORCESDELAMOUR_1678_orig.tsv": {
+      "windows": 365,
+      "found": 6,
+      "share": 0.01643835616438356,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/modern_esthetique_mémoires_pour_servir_à_l_histoire_201.txt",
+          6
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BERGASSE_JOURNEEDESDUPES_1790_orig.tsv": {
+      "windows": 431,
+      "found": 284,
+      "share": 0.6589327146171694,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/theatre18_clean_BERGASSE_JOURNEEDESDUPES_clean.txt",
+          284
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/modern_theatre18_gallica_la_journee_des_dupes_pièce_173.txt",
+          6
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BIEVRE_VERCINGENTORIXE_1770_orig.tsv": {
+      "windows": 346,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BOISSY_VIEESTUNSONGE_1732_orig.tsv": {
+      "windows": 451,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DANCOURT_SANCHO_1712_orig.tsv": {
+      "windows": 398,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DIDEROT_FILSNATUREL_1757_orig.tsv": {
+      "windows": 394,
+      "found": 254,
+      "share": 0.6446700507614214,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/theatre18_clean_DIDEROT_FILSNATUREL_clean.txt",
+          254
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DUFRESNY_MARIAGEFAITETROMPU_1721_orig.tsv": {
+      "windows": 400,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/GUDIN_LOTHAIRE_1759_orig.tsv": {
+      "windows": 411,
+      "found": 66,
+      "share": 0.16058394160583941,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/modern_theatre18_gallica_le_royaume_mis_en_interdit_492.txt",
+          66
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/MARIVAUX_PEREPRUDENT_1712_orig.tsv": {
+      "windows": 350,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/REGNARD_MENECHMES_1705_orig.tsv": {
+      "windows": 426,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/VOLTAIRE_MORTDECESAR_1736_orig.tsv": {
+      "windows": 378,
+      "found": 62,
+      "share": 0.164021164021164,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_press/Mercure_de_France___dédié_1735-11-01_242.txt",
+          62
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/19/ALLAIS_BONBOUGRE_1889.tsv": {
+      "windows": 349,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/AUDE_ECOLETRAGIQUE_1802.tsv": {
+      "windows": 350,
+      "found": 350,
+      "share": 1.0,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/theatre18_clean_AUDE_ECOLETRAGIQUE_clean.txt",
+          350
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/19/BANVILLE_ANCIENPIERROT_1877.tsv": {
+      "windows": 457,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/BONNETAIN_APRESLEDIVORCE_1890.tsv": {
+      "windows": 405,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/CONSTANT_WALLSTEIN_1809.tsv": {
+      "windows": 400,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/DUMAS_DONJUAN_1836.tsv": {
+      "windows": 373,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/GENLIS_BELLEETLABETE_1829.tsv": {
+      "windows": 410,
+      "found": 209,
+      "share": 0.5097560975609756,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/modern_theatre18_gallica_théâtre_d_éducation_à_l_745.txt",
+          209
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/theatre_original/19/HUGO_HERNANI_1830.tsv": {
+      "windows": 404,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/JARRY_UBUROI_1896.tsv": {
+      "windows": 454,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/19/SAND_MOLIERE_1851.tsv": {
+      "windows": 412,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/ANOUILH_MEDEE_1946.tsv": {
+      "windows": 506,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/BERNARDT_PARTIEDEBRIDGE_1930.tsv": {
+      "windows": 428,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/BERTON_HOMMEQUIATUELAMORT_1928.tsv": {
+      "windows": 381,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/CESAIRE_CHRISTOPHE_1963.tsv": {
+      "windows": 483,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/COURTELINE_MONSIEURBADIN_1904.tsv": {
+      "windows": 427,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/GIRAUDOUX_ELECTRE_1937.tsv": {
+      "windows": 435,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/HUGUES_CENDRILLON_1906.tsv": {
+      "windows": 335,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/HUGUES_TYL_1906.tsv": {
+      "windows": 349,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/LESENNE_REVEILCORNEILLE_1916.tsv": {
+      "windows": 454,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/theatre_original/20/RENARD_MAITRESSE_1927.tsv": {
+      "windows": 387,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ANONYME_PAIX-BERGERAC_orig.tsv": {
+      "windows": 514,
+      "found": 20,
+      "share": 0.038910505836575876,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k6435941k.txt",
+          20
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ANONYME_REITRES_orig.tsv": {
+      "windows": 537,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ARBEAU_BELLE_orig.tsv": {
+      "windows": 376,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/FRANCOISPREMIER_CORRESP_orig.tsv": {
+      "windows": 266,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LENONCOURT-MARTIN_HYPNEROTOMACHIE_orig.tsv": {
+      "windows": 500,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LIEBAUT_MISERES_orig.tsv": {
+      "windows": 608,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LOUISELABE_ELEGIE.tsv": {
+      "windows": 425,
+      "found": 350,
+      "share": 0.8235294117647058,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_archive/SUPP_Collection_des_meilleurs_ouvrages_fran3.txt",
+          350
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_press/Annales_poetiques_ou_Almanach_des_muses_1778_4_74.txt",
+          149
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_FWW.labe.poetiques.txt",
+          110
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/MARGUERITENAVARRE_MIROIR_orig.tsv": {
+      "windows": 500,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/RABELAIS_PANTAGRUEL_orig.tsv": {
+      "windows": 394,
+      "found": 106,
+      "share": 0.26903553299492383,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_ADD.rabelais.pantagruel.txt",
+          106
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/RONSARD_SONNETS_orig.tsv": {
+      "windows": 448,
+      "found": 324,
+      "share": 0.7232142857142857,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_POE-101.txt",
+          309
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_ADD.ronsard.sonnets.txt",
+          166
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_press/Annales_poetiques_ou_Almanach_des_muses_1778_5_84.txt",
+          35
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANNEROHAN_PORTRAIT_orig.tsv": {
+      "windows": 415,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANONYME_AIRABOIRE_orig.tsv": {
+      "windows": 530,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANONYME_ARREST_orig.tsv": {
+      "windows": 462,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/BOILEAU_SATIRE_orig.tsv": {
+      "windows": 314,
+      "found": 300,
+      "share": 0.9554140127388535,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_TLF.367.txt",
+          300
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k74825x.txt",
+          9
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_dicos/Trevoux_2.txt",
+          7
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k6565934h.txt",
+          2
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/DONNEAU_NOUVELLES_orig.tsv": {
+      "windows": 485,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ELISABETHBOHEME_CORRESPONDANCE_orig.tsv": {
+      "windows": 487,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/PERRAULT_PETIT-CHAPERON_orig.tsv": {
+      "windows": 376,
+      "found": 200,
+      "share": 0.5319148936170213,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_TLF.351.txt",
+          200
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_press/Cabinet_des_fe_es_1785_1_114.txt",
+          47
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/POULLAIN_EGALITE_orig.tsv": {
+      "windows": 467,
+      "found": 199,
+      "share": 0.4261241970021413,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k9617928w.txt",
+          199
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/SCUDERY_ARTAMENE_orig.tsv": {
+      "windows": 390,
+      "found": 330,
+      "share": 0.8461538461538461,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_cyrus.new.txt",
+          330
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/VERVILLE_UN-JOUR_orig.tsv": {
+      "windows": 380,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/ANONYME_DECLARATION_orig.tsv": {
+      "windows": 513,
+      "found": 352,
+      "share": 0.6861598440545809,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_Bbl1587.txt",
+          302
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_pamphlets/principeselement00darp.txt",
+          220
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_pamphlets/catchismefranais00sans.txt",
+          208
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k56197925.txt",
+          95
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_pamphlets/declarationdesdr00lang.txt",
+          93
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHARRIERE_LETTRE.tsv": {
+      "windows": 524,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHATELET_DISCOURS_orig.tsv": {
+      "windows": 664,
+      "found": 277,
+      "share": 0.4171686746987952,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_FWW.chatelet.discours.txt",
+          243
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k64858651.txt",
+          94
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHENIER_ODE.tsv": {
+      "windows": 398,
+      "found": 398,
+      "share": 1.0,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_TLF.820.txt",
+          398
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/FREDERICDEUX_DIVINEEMILIE.tsv": {
+      "windows": 516,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/MERICOURT_DISCOURS_orig.tsv": {
+      "windows": 741,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/MONTEGUT_ISMENE_orig.tsv": {
+      "windows": 397,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/ROUGET_MARSEILLAISE.tsv": {
+      "windows": 433,
+      "found": 260,
+      "share": 0.6004618937644342,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/modern_essai_historique_politique_et_moral_sur_les_r‚volutions_ancievolution_fran‡aise__fran‡oisren‚_de_chateaubriand_40.txt",
+          137
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_pamphlets/latrompetteduper00lema.txt",
+          119
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_press/AdM_1793_28.txt",
+          108
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_pamphlets/programmedunecrm00unse.txt",
+          96
+        ],
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_merged/bpt6k6271140s.txt",
+          96
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/TENCIN_SIEGE_orig.tsv": {
+      "windows": 493,
+      "found": 492,
+      "share": 0.9979716024340771,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/frantext18_TLF.480.txt",
+          492
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/VOLTAIRE_ZADIG_orig.tsv": {
+      "windows": 414,
+      "found": 188,
+      "share": 0.45410628019323673,
+      "top_sources": [
+        [
+          "/data/pretrain_candide/extracted_v1f/modern_canon/C30090.432.txt",
+          188
+        ]
+      ]
+    },
+    "Data_outOfDomain_original/varia_original/19/CMH_PV.tsv": {
+      "windows": 443,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/DELESCLUZE_LETTRE.tsv": {
+      "windows": 451,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/DEROULEDE_CHANTS.tsv": {
+      "windows": 457,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/DESBORDESVALMORE_INSOMNIE.tsv": {
+      "windows": 478,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/HEREDIA_EPEE.tsv": {
+      "windows": 471,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/MERIMEE_ACADEMIE.tsv": {
+      "windows": 368,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/POTTIER_INTERNATIONALE.tsv": {
+      "windows": 403,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/SAND_MARIANNE.tsv": {
+      "windows": 319,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/SEGUR_BOSSU.tsv": {
+      "windows": 488,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/19/STAEL_ALLEMAGNE.tsv": {
+      "windows": 501,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/ANONYME_CONSCRITS.tsv": {
+      "windows": 508,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/BLUM_FRONTPOP.tsv": {
+      "windows": 401,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/BRASILLACH_JEANNE.tsv": {
+      "windows": 465,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/BRIMONT_MIRAGES.tsv": {
+      "windows": 407,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/COLETTE_MAISON.tsv": {
+      "windows": 416,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/LAHIRE_ROUE.tsv": {
+      "windows": 447,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/LASTEYRIE_TESTAMENT.tsv": {
+      "windows": 381,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/LONDRES_BAGNE.tsv": {
+      "windows": 454,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/NOAILLES_COEUR.tsv": {
+      "windows": 373,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    },
+    "Data_outOfDomain_original/varia_original/20/RACHILDE_GRENOUILLES.tsv": {
+      "windows": 432,
+      "found": 0,
+      "share": 0.0,
+      "top_sources": []
+    }
+  },
+  "groups": {
+    "Data_outOfDomain_original/theatre_original/16_orig": {
+      "share": 0.0,
+      "windows": 3708
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig": {
+      "share": 0.03893543617545589,
+      "windows": 4058
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig": {
+      "share": 0.1671267252195734,
+      "windows": 3985
+    },
+    "Data_outOfDomain_original/theatre_original/19": {
+      "share": 0.13926258096661684,
+      "windows": 4014
+    },
+    "Data_outOfDomain_original/theatre_original/20": {
+      "share": 0.0,
+      "windows": 4185
+    },
+    "Data_outOfDomain_original/varia_original/16_orig": {
+      "share": 0.17513134851138354,
+      "windows": 4568
+    },
+    "Data_outOfDomain_original/varia_original/17_orig": {
+      "share": 0.23896888063167673,
+      "windows": 4306
+    },
+    "Data_outOfDomain_original/varia_original/18_orig": {
+      "share": 0.38621637541723935,
+      "windows": 5093
+    },
+    "Data_outOfDomain_original/varia_original/19": {
+      "share": 0.0,
+      "windows": 4379
+    },
+    "Data_outOfDomain_original/varia_original/20": {
+      "share": 0.0,
+      "windows": 4284
+    }
+  },
+  "control": {
+    "_control": {
+      "share": 1.0,
+      "windows": 4042
+    }
+  }
+}
