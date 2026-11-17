@@ -1,0 +1,389 @@
+{
+ "max_overlap": 0.05,
+ "excluded_passages": 21,
+ "results": {
+  "baseline_almanach__camembert-base": {
+   "model": "hf:almanach/camembert-base",
+   "pretraining_step": -1,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.9732386673948662,
+   "centuries": {
+    "normalised/16": 0.9481367652708413,
+    "normalised/17": 0.9657664511220997,
+    "normalised/18": 0.963375224416517,
+    "normalised/19": 0.9598540145985401,
+    "normalised/20": 0.962043795620438,
+    "original/16": 0.9204763734152901,
+    "original/17": 0.9478889311525295,
+    "original/18": 0.9597845601436266,
+    "original/19": 0.9591240875912409,
+    "original/20": 0.9624087591240876
+   },
+   "mean": 0.9427166215704821,
+   "clean_centuries": {
+    "normalised/16": 0.9476534296028881,
+    "normalised/17": 0.9629831246597713,
+    "normalised/18": 0.9678111587982833,
+    "normalised/19": 0.9606331168831169,
+    "normalised/20": 0.962043795620438,
+    "original/16": 0.9196750902527075,
+    "original/17": 0.9428415895481764,
+    "original/18": 0.9663805436337625,
+    "original/19": 0.9602272727272727,
+    "original/20": 0.9624087591240876
+   },
+   "clean": 0.9429657411448821,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.950896336710834,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9394606494221244,
+     "words": 5451
+    },
+    "diff": 0.011435687288709584
+   }
+  },
+  "baseline_pjox__dalembert": {
+   "model": "hf:pjox/dalembert",
+   "pretraining_step": -1,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.9868924085199344,
+   "centuries": {
+    "normalised/16": 0.9462159047253169,
+    "normalised/17": 0.9707112970711297,
+    "normalised/18": 0.9666068222621185,
+    "normalised/19": 0.9554744525547445,
+    "normalised/20": 0.9594890510948905,
+    "original/16": 0.936611601997695,
+    "original/17": 0.9680486877139597,
+    "original/18": 0.9640933572710951,
+    "original/19": 0.9558394160583942,
+    "original/20": 0.9602189781021898
+   },
+   "mean": 0.9562512156609166,
+   "clean_centuries": {
+    "normalised/16": 0.944043321299639,
+    "normalised/17": 0.9700598802395209,
+    "normalised/18": 0.9670958512160229,
+    "normalised/19": 0.9553571428571429,
+    "normalised/20": 0.9594890510948905,
+    "original/16": 0.9341155234657039,
+    "original/17": 0.9673380511703865,
+    "original/18": 0.9649499284692418,
+    "original/19": 0.955762987012987,
+    "original/20": 0.9602189781021898
+   },
+   "clean": 0.9554678343684441,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9633671083398285,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9532195927352779,
+     "words": 5451
+    },
+    "diff": 0.010147515604550628
+   }
+  },
+  "step_1000": {
+   "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_1000.pt",
+   "pretraining_step": 1000,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.976333515383215,
+   "centuries": {
+    "normalised/16": 0.9354590856703804,
+    "normalised/17": 0.9718524153670597,
+    "normalised/18": 0.9687612208258528,
+    "normalised/19": 0.9529197080291971,
+    "normalised/20": 0.9492700729927007,
+    "original/16": 0.9104878985785632,
+    "original/17": 0.9551160136934196,
+    "original/18": 0.9644524236983842,
+    "original/19": 0.9532846715328467,
+    "original/20": 0.9485401459854015
+   },
+   "mean": 0.9433521119901224,
+   "clean_centuries": {
+    "normalised/16": 0.9345667870036101,
+    "normalised/17": 0.9689711486118672,
+    "normalised/18": 0.9728183118741058,
+    "normalised/19": 0.9525162337662337,
+    "normalised/20": 0.9492700729927007,
+    "original/16": 0.9111010830324909,
+    "original/17": 0.9488296135002722,
+    "original/18": 0.9670958512160229,
+    "original/19": 0.952922077922078,
+    "original/20": 0.9485401459854015
+   },
+   "clean": 0.9423421825829287,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.955962587685113,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9381764813795633,
+     "words": 5451
+    },
+    "diff": 0.017786106305549665
+   }
+  },
+  "step_10000": {
+   "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_10000.pt",
+   "pretraining_step": 10000,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.977607864554888,
+   "centuries": {
+    "normalised/16": 0.9385324625432193,
+    "normalised/17": 0.9657664511220997,
+    "normalised/18": 0.9666068222621185,
+    "normalised/19": 0.9507299270072993,
+    "normalised/20": 0.9514598540145985,
+    "original/16": 0.9258547829427584,
+    "original/17": 0.9604412324077596,
+    "original/18": 0.9644524236983842,
+    "original/19": 0.9510948905109489,
+    "original/20": 0.9507299270072993
+   },
+   "mean": 0.9502494796829675,
+   "clean_centuries": {
+    "normalised/16": 0.9354693140794224,
+    "normalised/17": 0.9646162221012521,
+    "normalised/18": 0.9685264663805436,
+    "normalised/19": 0.950487012987013,
+    "normalised/20": 0.9514598540145985,
+    "original/16": 0.9232851985559567,
+    "original/17": 0.9591725639629831,
+    "original/18": 0.9663805436337625,
+    "original/19": 0.950487012987013,
+    "original/20": 0.9507299270072993
+   },
+   "clean": 0.9496127687175674,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9594699922057678,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9464318473674556,
+     "words": 5451
+    },
+    "diff": 0.013038144838312227
+   }
+  },
+  "step_2000": {
+   "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_2000.pt",
+   "pretraining_step": 2000,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.977607864554888,
+   "centuries": {
+    "normalised/16": 0.9385324625432193,
+    "normalised/17": 0.9684290604792697,
+    "normalised/18": 0.9637342908438061,
+    "normalised/19": 0.9514598540145985,
+    "normalised/20": 0.9529197080291971,
+    "original/16": 0.9185555128697657,
+    "original/17": 0.9589197413465196,
+    "original/18": 0.9615798922800718,
+    "original/19": 0.9507299270072993,
+    "original/20": 0.954014598540146
+   },
+   "mean": 0.9463517154987856,
+   "clean_centuries": {
+    "normalised/16": 0.9386281588447654,
+    "normalised/17": 0.9673380511703865,
+    "normalised/18": 0.9685264663805436,
+    "normalised/19": 0.950487012987013,
+    "normalised/20": 0.9529197080291971,
+    "original/16": 0.9169675090252708,
+    "original/17": 0.954817637452368,
+    "original/18": 0.9670958512160229,
+    "original/19": 0.9496753246753247,
+    "original/20": 0.954014598540146
+   },
+   "clean": 0.9462936658978872,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9555728760717069,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9425793432397725,
+     "words": 5451
+    },
+    "diff": 0.012993532831934385
+   }
+  },
+  "step_20000": {
+   "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_20000.pt",
+   "pretraining_step": 20000,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.9757873657382122,
+   "centuries": {
+    "normalised/16": 0.9393008067614291,
+    "normalised/17": 0.9646253328261697,
+    "normalised/18": 0.9684021543985637,
+    "normalised/19": 0.9547445255474453,
+    "normalised/20": 0.9547445255474453,
+    "original/16": 0.9258547829427584,
+    "original/17": 0.9608216051730696,
+    "original/18": 0.9673249551166966,
+    "original/19": 0.9532846715328467,
+    "original/20": 0.9529197080291971
+   },
+   "mean": 0.9513337810775081,
+   "clean_centuries": {
+    "normalised/16": 0.9372743682310469,
+    "normalised/17": 0.965160587915079,
+    "normalised/18": 0.9713876967095851,
+    "normalised/19": 0.9545454545454546,
+    "normalised/20": 0.9547445255474453,
+    "original/16": 0.9232851985559567,
+    "original/17": 0.9586281981491562,
+    "original/18": 0.9721030042918455,
+    "original/19": 0.952922077922078,
+    "original/20": 0.9529197080291971
+   },
+   "clean": 0.9513388003323194,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9602494154325799,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9477160154100165,
+     "words": 5451
+    },
+    "diff": 0.012533400022563423
+   }
+  },
+  "step_5000": {
+   "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_5000.pt",
+   "pretraining_step": 5000,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.975059166211542,
+   "centuries": {
+    "normalised/16": 0.9385324625432193,
+    "normalised/17": 0.9650057055914797,
+    "normalised/18": 0.9684021543985637,
+    "normalised/19": 0.9529197080291971,
+    "normalised/20": 0.9547445255474453,
+    "original/16": 0.9247022666154437,
+    "original/17": 0.9581589958158996,
+    "original/18": 0.9655296229802514,
+    "original/19": 0.9518248175182482,
+    "original/20": 0.9565693430656934
+   },
+   "mean": 0.9494636284705317,
+   "clean_centuries": {
+    "normalised/16": 0.9354693140794224,
+    "normalised/17": 0.9624387588459444,
+    "normalised/18": 0.9721030042918455,
+    "normalised/19": 0.9521103896103896,
+    "normalised/20": 0.9547445255474453,
+    "original/16": 0.9214801444043321,
+    "original/17": 0.9531845400108874,
+    "original/18": 0.9678111587982833,
+    "original/19": 0.9508928571428571,
+    "original/20": 0.9565693430656934
+   },
+   "clean": 0.9474919477378343,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9621979734996103,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.9440469638598422,
+     "words": 5451
+    },
+    "diff": 0.018151009639768123
+   }
+  },
+  "untrained_s1": {
+   "model": "candide:runs/enc/untrained_v2g_qk.pt",
+   "pretraining_step": 0,
+   "lr": 3e-05,
+   "epochs": 3,
+   "seed": 1,
+   "dev_final": 0.9353722920080102,
+   "centuries": {
+    "normalised/16": 0.8997310795236266,
+    "normalised/17": 0.9231647014073793,
+    "normalised/18": 0.9281867145421903,
+    "normalised/19": 0.9054744525547446,
+    "normalised/20": 0.8956204379562044,
+    "original/16": 0.8536304264310411,
+    "original/17": 0.8801825789273487,
+    "original/18": 0.9217235188509875,
+    "original/19": 0.9054744525547446,
+    "original/20": 0.8978102189781022
+   },
+   "mean": 0.8851788414031257,
+   "clean_centuries": {
+    "normalised/16": 0.8998194945848376,
+    "normalised/17": 0.9172563962983125,
+    "normalised/18": 0.9349070100143062,
+    "normalised/19": 0.9021915584415584,
+    "normalised/20": 0.8956204379562044,
+    "original/16": 0.8560469314079422,
+    "original/17": 0.8709853021230267,
+    "original/18": 0.9241773962804005,
+    "original/19": 0.9017857142857143,
+    "original/20": 0.8978102189781022
+   },
+   "clean": 0.8837365432704565,
+   "read_minus_clean": {
+    "read": {
+     "acc": 0.9017926734216679,
+     "words": 2566
+    },
+    "clean": {
+     "acc": 0.8785543936892314,
+     "words": 5451
+    },
+    "diff": 0.02323827973243653
+   }
+  },
+  "dalembert_s1": {
+   "model": "hf:pjox/dalembert",
+   "pretraining_step": -1,
+   "lr": 5e-06,
+   "epochs": 10,
+   "seed": 1,
+   "dev_final": 0.9816129619515748,
+   "centuries": {
+    "normalised/16": 0.9450633883980023,
+    "normalised/17": 0.9729935336629897,
+    "normalised/18": 0.9676840215439856,
+    "normalised/19": 0.9562043795620438,
+    "normalised/20": 0.9558394160583942,
+    "original/16": 0.9354590856703804,
+    "original/17": 0.9699505515405097,
+    "original/18": 0.9669658886894076,
+    "original/19": 0.9554744525547445,
+    "original/20": 0.9547445255474453
+   },
+   "mean": 0.9574585086334325,
+   "clean_centuries": {},
+   "clean": null
+  }
+ }
+}

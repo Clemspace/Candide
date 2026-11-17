@@ -305,19 +305,168 @@ released by ERC ModERN.
   the incident and are unaffected.
 - Which checkpoint is released (95,000 or 77,500) is decided by the memorization probe on both. **[pending]**
 
+### 4.11 Branch from step 48,000, longer cooldown — 2026-11-15 ~21:00 to 2026-11-16 ~22:15
+- `results/2026-11-16/branch48k_v2g.json` (from the W&B run summary; history and code commit still to
+  export). Cooldown from the full run's step 48,000 to 77,500: 29,500 steps, 38% of the run, against
+  15,500 for 4.10 and 19,000 for 4.9. Same token budget as 4.10 (5.08B).
+- Result: **val 3.158, Encyclopédie vol. 17 2.357, canon 2.653**, against 3.186 / 2.386 / 2.680 for
+  4.10 and 3.166 / 2.371 / 2.665 for the full run.
+- Predictions. Clément, 2026-11-16 20:46 (rule fixed 20:58, after launch, before any cooldown
+  evaluation): 3.186, "linear in total tokens: same tokens, same loss". Wrong by 0.027. Claude,
+  2026-11-15 20:13: 3.16 +- 0.01. Held. Decision rule written 2026-11-16 23:30 for the encoder:
+  val <= 3.173 means a 40% cooldown, otherwise 20%. Result: 40% (6.5).
+- Reading: at equal budget, doubling the cooldown is worth 0.027 nats; the token count does not
+  decide. Against the full run the branch is 0.007 lower with 18% fewer tokens, one seed: "at least
+  as good" is established, "better" is not. The Encyclopédie and canon gains are flattered: the mix
+  switches to those two sets at cooldown start, so a longer cooldown re-reads them more often.
+- Wall time 25.2 h: the GPU was shared with the encoder bench and LR checks and another job for part
+  of the run. Not a throughput figure.
+- Release candidate: this checkpoint, subject to the memorization probe, which matters more here
+  because of the extra passes over the canon. **[pending]**
+
 ## 5. Open questions and missing pieces (for the reference document)
 - Cross-tokenizer comparison: v2g losses are not comparable with v1 losses (tokenizer,
   validation set, shape all changed). Needed: bits per character on identical documents.
-- Evaluation chapter: downstream tasks for 18c French (e.g. POS on FreEM), comparison
-  with existing French historical models; generated samples (illustration only).
+- Evaluation chapter: POS on FreEM_LPM done for the encoder (section 7); decoder claims A-D
+  (baselines in bits per byte, minimal pairs, horizon, OCR ranking) not run yet; generated samples
+  (illustration only).
 - Release: extraction/memorization test before release, threshold to agree with partners;
   Hugging Face conversion (our RoPE rotates interleaved pairs: q/k rows need a per-head
   permutation; check with a logits-equality test).
-- Encoder (ModernBERT-like, `configs/encoder_modernbert18c.yaml`): LR not tuned; run after the decoder.
+- Encoder: see section 6.
 - Corpus: verse lost to `<p>`-only extraction; noisy French files kept out; dictionary
   editions; Latin (v3).
 - Data-constrained regime (if compute grows ~10x, e.g. SCAI access): high weight decay,
   ensembles + distillation (Kim et al. 2025), diffusion LMs for many epochs (Prabhudesai et al. 2025).
+
+## 6. Encoder v2g (2026-11-15 to 2026-11-18)
+
+### 6.1 Trainer port and configuration
+- `train_encoder18c.py` gets what the decoder trainer gained: the shared warmup-stable-decay schedule
+  (cosine kept and tested equal to the old formula), `torch.compile`, checkpoint retention
+  (`keep_last`, `keep_steps`), a stop on non-finite loss, a training mix over several shard roots,
+  and extra validation sets. Config `configs/full/encoder_v2g.yaml`: ModernBERT-base architecture
+  (22 layers, width 768, local attention 128 with a global layer every 3), 135.6M parameters,
+  tokenizer v2g, 30% masking, AdamW, 65,536 tokens per step.
+- Data: `shards_v2g` plus the Encyclopédie (`shards_enc`, volumes 1-16) at 0.9% of the windows, its
+  share of the tokens; volume 17 held out as a second validation set (1,479 windows), as for the
+  decoder.
+- Throughput bench, 2026-11-16 22:57-23:22, 300 steps per micro-batch: 47.8K tok/s (8), 50.8K (16),
+  52.7K (32). Micro-batch 32. With QK-norm (6.5): 51.3K.
+
+### 6.2 Learning-rate check — 2026-11-17 00:00-01:20
+- 1,526 steps (100M tokens), warmup 150, same schedule shape. Final val: **1e-3: 3.466; 5e-4: 3.550;
+  2.5e-4: 3.866** (masked accuracy 0.422 / 0.413 / 0.377). `runs/enc-lrcheck-*.log`.
+- Rule fixed before the check: lowest final val; the lower rate if within 0.01. Result: 1e-3, at the
+  edge of the range tried.
+
+### 6.3 First launch: instability — 2026-11-17 ~01:30 to ~11:00
+- lr 1e-3, no QK-norm, 90,000 steps planned. Gradient-norm spikes from about step 25,450 (32, 190,
+  2,932, 1,217 within 450 steps; norm otherwise ~0.25), a loss spike to 4.25 at step 25,900, val
+  2.672 at step 26,000 with training loss not back to its pre-spike 2.47. Stopped.
+- Reading: late spikes at a constant high rate in a model without QK-norm; attention-logit growth is
+  the usual cause (Wortsman et al. 2023). Not confirmed: attention logits were not logged.
+- Retention had already deleted the last checkpoint before the spikes (step 25,000; `keep_last: 2`
+  keeps two). Step 20,000 survived as a `keep_step`. A fork was rejected anyway: QK-norm cannot be
+  added to trained weights, and the encoder trainer does not restore its data position on resume.
+- Note on the W&B comparison that suggested the rate was wrong: the LR checks warm up over 150 steps
+  and the long run over 1,000, and the checks cool down from step ~1,220, so their curves cannot be
+  compared step for step.
+
+### 6.4 Second launch, stopped — 2026-11-17 10:40 to ~11:05
+- QK-norm with lr 5e-4. Claude chose 5e-4 without the check's numbers, on the argument that short
+  checks favour high rates, and set a condition: if 5e-4 was more than 0.05 behind, say so before
+  launching. It was 0.083 behind; the run was stopped near step 1,000 and restarted at the check's
+  winner.
+
+### 6.5 Third launch — 2026-11-17 11:09 (running)
+- W&B `gnkzjfhf`. QK-norm on all 22 layers (checked by parameter count), lr 1e-3, warmup 1,000
+  (unchanged across the three launches), 52,000 steps (3.41B tokens, ~1.2 passes), cooldown 1-sqrt
+  over the last 40% from step 31,200 (4.11). Expected end 2026-11-18 ~06:00.
+- Up to step ~25,000 this run differs from the first launch only by QK-norm: a measured ablation of
+  the instability.
+- Predictions. Claude, 2026-11-17 11:03: no gradient norm above 10 before the cooldown; val within
+  0.02 of the first launch at matched steps up to 20,000. Clément: none written yet. **[to check:
+  grad norms and val at 20,000]**
+
+## 7. Evaluation: part-of-speech tagging on FreEM_LPM (2026-11-17)
+
+### 7.1 Harness
+- `scripts/pos_freem.py`: one encoder fine-tuned with a linear head over mean-pooled subwords, word
+  accuracy; Candide checkpoints and Hugging Face models through the same code. Data: FreEM_LPM
+  `Models/Train_4` split (train 7,811 sentences, 132,364 words; dev 5,493 words; 50 tags) and the
+  out-of-domain test sets: 10 passages per century, genre (theatre, varia) and spelling (original,
+  normalised). Headline: mean of the 16th-, 17th- and 18th-century accuracies, original spelling
+  (D'AlemBERT's "Avg"). Two protocols: published (5e-6, 10 epochs, D'AlemBERT's) and quick (3e-5,
+  3 epochs) for the curve over checkpoints (`scripts/pos_watch.py`).
+- Sampling error: ~2,700 words per century, so +-0.75 points at 95% per century and +-0.4 on the
+  three-century mean. One seed: a difference under ~0.6 on the mean is not established.
+
+### 7.2 Reproduction of D'AlemBERT
+- `results/pos/dalembert_s1.json`, published protocol, seed 1: original spelling 93.55 / 97.00 /
+  96.70, mean **95.75**, against 94.02 / 96.16 / 96.62, mean 95.60 published (Gabay et al. 2022);
+  normalised mean 95.96 against 95.95. Rule fixed before the run: within 1 point on the mean. The
+  harness stands.
+
+### 7.3 Contamination of the test passages
+- `results/2026-11-17/overlap_freem.json` (`scripts/overlap_freem.py`, run on obtic1 against the 103,927
+  kept training files of the v2g manifest and the Encyclopédie; 60-character folded windows; 10
+  positive controls at 100%, no missing file). 21 test passages have more than 5% of their windows
+  in the corpus, most at 50-100%: groups up to 38.6% (18th c. varia), 23.9% (17th varia), 17.5%
+  (16th varia), 16.7% (18th theatre). Sources are mostly `modern_canon` (Frantext and the
+  theatre collection).
+- A first run on obtic-gpu1 returned 0% everywhere: the manifest paths do not exist there, and the
+  script counted unreadable files as "no overlap". Fixed: it stops when more than 1% of paths are
+  missing or unreadable, and carries the positive control.
+- Two 19th-century passages matched. AUDE_ECOLETRAGIQUE_1802 is at 100% in
+  `modern_canon/theatre18_clean_AUDE_ECOLETRAGIQUE_clean.txt`: a play dated 1802 in the training canon.
+  GENLIS_BELLEETLABETE_1829 is at 51% in a Gallica *Théâtre d'éducation* file, probably the
+  1779-1780 text reprinted. **[verify: the date of the AUDE file in the inventory; if > 1800 it is a
+  leak through the date policy, for the data paper]**
+- The reverse holds for D'AlemBERT: all of FreEM_LPM, including the fine-tuning and dev text, is in
+  its pretraining corpus (Gabay et al. 2022). It may contribute to its dev lead (98.7 against
+  97.5-97.8 for Candide checkpoints).
+- Rule: every model is reported on all passages and on the clean subset (passages under 5%),
+  `pos_freem.py --overlap`.
+
+### 7.4 Results, quick protocol, seed 1
+`results/2026-11-17/pos/summary.json` (`scripts/pos_summary.py`). Mean over 16th-18th c., original
+spelling; "read - clean" is pooled accuracy on the 21 passages found in our corpus minus on the
+others.
+
+| model | all | clean | read - clean |
+|---|---|---|---|
+| Candide encoder, untrained (same init) | 88.52 | 88.37 | +2.32 |
+| step 1,000 (65M tokens) | 94.34 | 94.23 | +1.78 |
+| step 2,000 | 94.64 | 94.63 | +1.30 |
+| step 5,000 | 94.95 | 94.75 | +1.82 |
+| step 10,000 | 95.02 | 94.96 | +1.30 |
+| step 20,000 (1.3B tokens) | 95.13 | 95.13 | +1.25 |
+| CamemBERT-base | 94.27 | 94.30 | +1.14 |
+| D'AlemBERT | 95.63 | 95.55 | +1.01 |
+
+- Pretraining is worth ~6.6 points over the untrained floor; 5.8 of them come in the first 65M
+  tokens, and steps 1,000 to 20,000 add 0.8. At 20,000 the encoder is 0.4 behind D'AlemBERT on the
+  clean mean, inside one-seed noise. The cooldown (from 31,200) is still to come; for the decoder it
+  gave more than half of the final gain.
+- The passages found in our corpus are easier for every model, the untrained one and the two
+  baselines included (+1.0 to +2.3): they are canonical printed texts. The difference is not a
+  memorization effect; Candide's excess over the baselines is at most ~0.8 and not resolved by one
+  seed. The clean column is the comparison the paper makes.
+- CamemBERT scores 94.27 here and 89.27 in the D'AlemBERT paper (published protocol), while
+  D'AlemBERT barely moves (95.63 here, 95.75 at 5e-6). The low rate seems to handicap CamemBERT;
+  the six-point gap in the paper would then come mostly from the protocol. **[pending: CamemBERT at
+  5e-6 in this harness, which decides it]**
+- Predictions. Claude, 2026-11-17 12:01: untrained floor 88-91. Held (88.52). Claude, 2026-11-15:
+  "the three models end within half a point; CamemBERT crossed before 10k steps". Crossed at 1,000:
+  held, trivially; the first part waits for the final checkpoint. Clément, 2026-11-16: final 96.25%;
+  CamemBERT crossed at 30k steps or later (wrong: by step 1,000); D'AlemBERT at 50k or later
+  (pending).
+
+### 7.5 Next
+- Final checkpoint on the watcher (quick protocol), then the paper table: published and quick
+  protocols, three seeds, for the final checkpoint, D'AlemBERT, CamemBERT and the untrained floor,
+  all passages and clean. CamemBERT at 5e-6 first.
 
 ## Evidence still to commit (copy into `results/` and reference from the text)
 Committed on 2026-11-09/10 under `results/`: inventory summary, dedup summaries (v2g, v1f),

@@ -1,0 +1,30 @@
+{
+ "source": "W&B run summary of candide-v2g-224m-branch48k, pasted by Clement 2026-11-17 (no history export yet)",
+ "description": "cooldown branched from step 48,000 of the full run (checkpoint step_48000.pt) to step 77,500; same config otherwise",
+ "code_commit": null,
+ "parent_run": "qq2gik3r",
+ "cooldown_start": 48000,
+ "steps": 77500,
+ "tokens": 5079040000,
+ "wall_hours": 25.18,
+ "wall_hours_note": "the GPU was shared with the encoder bench, LR checks and another job for part of the run; not a throughput figure",
+ "final": {
+  "val": 3.1583,
+  "enc": 2.3573,
+  "canon": 2.6526
+ },
+ "val_curve": null,
+ "predictions": {
+  "clement": {
+   "value": 3.186,
+   "written": "2026-11-16 20:46 / 20:58 (after launch, before any cooldown evaluation)",
+   "rule": "linear in total tokens: same tokens as the 62k branch, same loss"
+  },
+  "claude": {
+   "value": 3.16,
+   "tolerance": 0.01,
+   "written": "2026-11-15 20:13"
+  }
+ },
+ "note": "val_curve and the code commit are missing: export the W&B history of this run to fill them."
+}

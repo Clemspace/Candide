@@ -1,0 +1,1082 @@
+{
+  "model": "candide:runs/enc/candide-encoder-v2g-qk/checkpoints/step_5000.pt",
+  "pretraining_step": 5000,
+  "protocol": {
+    "lr": 3e-05,
+    "head_lr": null,
+    "epochs": 3,
+    "batch_size": 16,
+    "warmup_frac": 0.1,
+    "weight_decay": 0.01,
+    "dropout": 0.1,
+    "pooling": "mean",
+    "max_words": 64,
+    "max_train_sentences": null,
+    "seed": 1
+  },
+  "data": {
+    "train": "/home/ccastellon/data/FreEMlpm/Models/Train_4/training_data/train/pos_full.tsv",
+    "dev": "/home/ccastellon/data/FreEMlpm/Models/Train_4/training_data/dev/pos_full.tsv",
+    "test_root": "/home/ccastellon/data/FreEMlpm/Data_outOfDomain",
+    "train_sentences": 7811,
+    "train_words": 132364,
+    "dev_words": 5493,
+    "skipped_lines": 0,
+    "tags": 50
+  },
+  "params_m": 135.6,
+  "dev": [
+    {
+      "epoch": 1,
+      "train_loss": 0.7708441531152326,
+      "dev_acc": 0.9672310212998362
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.06871108426702931,
+      "dev_acc": 0.9725104678681958
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.041573202696482216,
+      "dev_acc": 0.975059166211542
+    }
+  ],
+  "test_groups": {
+    "Data_outOfDomain_normalised/theatre_normalised/16": {
+      "acc": 0.9408945686900958,
+      "files": 10,
+      "words": 1252,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17": {
+      "acc": 0.9673995451099318,
+      "files": 10,
+      "words": 1319,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18": {
+      "acc": 0.9650297619047619,
+      "files": 10,
+      "words": 1344,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19": {
+      "acc": 0.9617880317231434,
+      "files": 10,
+      "words": 1387,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20": {
+      "acc": 0.956397426733381,
+      "files": 10,
+      "words": 1399,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16": {
+      "acc": 0.9363434492968171,
+      "files": 10,
+      "words": 1351,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17": {
+      "acc": 0.9625954198473282,
+      "files": 10,
+      "words": 1310,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18": {
+      "acc": 0.9715475364330326,
+      "files": 10,
+      "words": 1441,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19": {
+      "acc": 0.9438285291943829,
+      "files": 10,
+      "words": 1353,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20": {
+      "acc": 0.9530201342281879,
+      "files": 10,
+      "words": 1341,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig": {
+      "acc": 0.9217252396166135,
+      "files": 10,
+      "words": 1252,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig": {
+      "acc": 0.9620924943138741,
+      "files": 10,
+      "words": 1319,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig": {
+      "acc": 0.9590773809523809,
+      "files": 10,
+      "words": 1344,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/theatre_original/19": {
+      "acc": 0.9610670511896179,
+      "files": 10,
+      "words": 1387,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_original/theatre_original/20": {
+      "acc": 0.9556826304503216,
+      "files": 10,
+      "words": 1399,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/16_orig": {
+      "acc": 0.927461139896373,
+      "files": 10,
+      "words": 1351,
+      "unseen_tag_words": 2
+    },
+    "Data_outOfDomain_original/varia_original/17_orig": {
+      "acc": 0.9541984732824428,
+      "files": 10,
+      "words": 1310,
+      "unseen_tag_words": 1
+    },
+    "Data_outOfDomain_original/varia_original/18_orig": {
+      "acc": 0.9715475364330326,
+      "files": 10,
+      "words": 1441,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/19": {
+      "acc": 0.9423503325942351,
+      "files": 10,
+      "words": 1353,
+      "unseen_tag_words": 0
+    },
+    "Data_outOfDomain_original/varia_original/20": {
+      "acc": 0.9574944071588367,
+      "files": 10,
+      "words": 1341,
+      "unseen_tag_words": 1
+    }
+  },
+  "test_centuries": {
+    "normalised/16": {
+      "acc": 0.9385324625432193,
+      "words": 2603
+    },
+    "normalised/17": {
+      "acc": 0.9650057055914797,
+      "words": 2629
+    },
+    "normalised/18": {
+      "acc": 0.9684021543985637,
+      "words": 2785
+    },
+    "normalised/19": {
+      "acc": 0.9529197080291971,
+      "words": 2740
+    },
+    "normalised/20": {
+      "acc": 0.9547445255474453,
+      "words": 2740
+    },
+    "original/16": {
+      "acc": 0.9247022666154437,
+      "words": 2603
+    },
+    "original/17": {
+      "acc": 0.9581589958158996,
+      "words": 2629
+    },
+    "original/18": {
+      "acc": 0.9655296229802514,
+      "words": 2785
+    },
+    "original/19": {
+      "acc": 0.9518248175182482,
+      "words": 2740
+    },
+    "original/20": {
+      "acc": 0.9565693430656934,
+      "words": 2740
+    }
+  },
+  "test_clean": {
+    "overlap_file": "results/2026-11-17/overlap_freem.json",
+    "max_overlap": 0.05,
+    "excluded_passages": [
+      "theatre/17/DURANT_OISIVETE_1699",
+      "theatre/17/SCUDERY_LIGDAMONELIDIAS_1631",
+      "theatre/18/BERGASSE_JOURNEEDESDUPES_1790",
+      "theatre/18/DIDEROT_FILSNATUREL_1757",
+      "theatre/18/GUDIN_LOTHAIRE_1759",
+      "theatre/18/VOLTAIRE_MORTDECESAR_1736",
+      "theatre/19/AUDE_ECOLETRAGIQUE_1802",
+      "theatre/19/GENLIS_BELLEETLABETE_1829",
+      "varia/16/LOUISELABE_ELEGIE",
+      "varia/16/RABELAIS_PANTAGRUEL",
+      "varia/16/RONSARD_SONNETS",
+      "varia/17/BOILEAU_SATIRE",
+      "varia/17/PERRAULT_PETIT-CHAPERON",
+      "varia/17/POULLAIN_EGALITE",
+      "varia/17/SCUDERY_ARTAMENE",
+      "varia/18/ANONYME_DECLARATION",
+      "varia/18/CHATELET_DISCOURS",
+      "varia/18/CHENIER_ODE",
+      "varia/18/ROUGET_MARSEILLAISE",
+      "varia/18/TENCIN_SIEGE",
+      "varia/18/VOLTAIRE_ZADIG"
+    ],
+    "centuries": {
+      "normalised/16": {
+        "acc": 0.9354693140794224,
+        "words": 2216
+      },
+      "normalised/17": {
+        "acc": 0.9624387588459444,
+        "words": 1837
+      },
+      "normalised/18": {
+        "acc": 0.9721030042918455,
+        "words": 1398
+      },
+      "normalised/19": {
+        "acc": 0.9521103896103896,
+        "words": 2464
+      },
+      "normalised/20": {
+        "acc": 0.9547445255474453,
+        "words": 2740
+      },
+      "original/16": {
+        "acc": 0.9214801444043321,
+        "words": 2216
+      },
+      "original/17": {
+        "acc": 0.9531845400108874,
+        "words": 1837
+      },
+      "original/18": {
+        "acc": 0.9678111587982833,
+        "words": 1398
+      },
+      "original/19": {
+        "acc": 0.9508928571428571,
+        "words": 2464
+      },
+      "original/20": {
+        "acc": 0.9565693430656934,
+        "words": 2740
+      }
+    }
+  },
+  "test_files": {
+    "Data_outOfDomain_normalised/theatre_normalised/16/ANONYME_PARDONNEUR_v.1500.tsv": {
+      "correct": 124,
+      "words": 137
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/ANONYME_PONTAUXANES_v.1500.tsv": {
+      "correct": 123,
+      "words": 129
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/ANONYME_RESURRECTIONJENINLANDORE_v.1500.tsv": {
+      "correct": 120,
+      "words": 125
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/ANONYME_SERMONJOYEUX_v.1500.tsv": {
+      "correct": 106,
+      "words": 115
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/BEZE_ABRAHAM_1550.tsv": {
+      "correct": 140,
+      "words": 146
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/GRINGORE_SAINT-LOUIS_1514.tsv": {
+      "correct": 141,
+      "words": 148
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/JODELLE_CLEOPATRE_1574.tsv": {
+      "correct": 101,
+      "words": 112
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/JODELLE_DIDON_1574.tsv": {
+      "correct": 96,
+      "words": 103
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/JODELLE_EUGENE_1574.tsv": {
+      "correct": 124,
+      "words": 128
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/16/TURNEBE_CONTENTS_1584.tsv": {
+      "correct": 103,
+      "words": 109
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/AUBIGNAC_PUCELLE_1642.tsv": {
+      "correct": 132,
+      "words": 139
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/CHAMPREPUS_ULYSSE_1603.tsv": {
+      "correct": 121,
+      "words": 131
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/CHAPPUZEAU_ARMETZAR_1656.tsv": {
+      "correct": 117,
+      "words": 119
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/DESHOULIERES_GENSERIC_1680.tsv": {
+      "correct": 137,
+      "words": 138
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/DESJARDINS_FAVORI_1665.tsv": {
+      "correct": 139,
+      "words": 148
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/DURANT_OISIVETE_1699.tsv": {
+      "correct": 156,
+      "words": 162
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/MATHIEU_MAGICIENNEETRANGERE_1617.tsv": {
+      "correct": 128,
+      "words": 133
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/SCUDERY_LIGDAMONELIDIAS_1631.tsv": {
+      "correct": 117,
+      "words": 117
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/URFE_SYLVANIRE_1627.tsv": {
+      "correct": 107,
+      "words": 109
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/17/VONDREBECK-ALARD_FORCESDELAMOUR_1678.tsv": {
+      "correct": 122,
+      "words": 123
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/BERGASSE_JOURNEEDESDUPES_1790.tsv": {
+      "correct": 130,
+      "words": 136
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/BIEVRE_VERCINGENTORIXE_1770.tsv": {
+      "correct": 115,
+      "words": 119
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/BOISSY_VIEESTUNSONGE_1732.tsv": {
+      "correct": 137,
+      "words": 142
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/DANCOURT_SANCHO_1712.tsv": {
+      "correct": 133,
+      "words": 139
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/DIDEROT_FILSNATUREL_1757.tsv": {
+      "correct": 149,
+      "words": 155
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/DUFRESNY_MARIAGEFAITETROMPU_1721.tsv": {
+      "correct": 131,
+      "words": 136
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/GUDIN_LOTHAIRE_1759.tsv": {
+      "correct": 138,
+      "words": 142
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/MARIVAUX_PEREPRUDENT_1712.tsv": {
+      "correct": 114,
+      "words": 115
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/REGNARD_MENECHMES_1705.tsv": {
+      "correct": 135,
+      "words": 142
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/18/VOLTAIRE_MORTDECESAR_1736.tsv": {
+      "correct": 115,
+      "words": 118
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/ALLAIS_BONBOUGRE_1889.tsv": {
+      "correct": 131,
+      "words": 141
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/AUDE_ECOLETRAGIQUE_1802.tsv": {
+      "correct": 120,
+      "words": 126
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/BANVILLE_ANCIENPIERROT_1877.tsv": {
+      "correct": 142,
+      "words": 149
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/BONNETAIN_APRESLEDIVORCE_1890.tsv": {
+      "correct": 151,
+      "words": 154
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/CONSTANT_WALLSTEIN_1809.tsv": {
+      "correct": 112,
+      "words": 115
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/DUMAS_DONJUAN_1836.tsv": {
+      "correct": 142,
+      "words": 144
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/GENLIS_BELLEETLABETE_1829.tsv": {
+      "correct": 145,
+      "words": 150
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/HUGO_HERNANI_1830.tsv": {
+      "correct": 135,
+      "words": 141
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/JARRY_UBUROI_1896.tsv": {
+      "correct": 136,
+      "words": 141
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/19/SAND_MOLIERE_1851.tsv": {
+      "correct": 120,
+      "words": 126
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/ANOUILH_MEDEE_1946.tsv": {
+      "correct": 171,
+      "words": 186
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/BERNARDT_PARTIEDEBRIDGE_1930.tsv": {
+      "correct": 132,
+      "words": 135
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/BERTON_HOMMEQUIATUELAMORT_1928.tsv": {
+      "correct": 121,
+      "words": 124
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/CESAIRE_CHRISTOPHE_1963.tsv": {
+      "correct": 137,
+      "words": 145
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/COURTELINE_MONSIEURBADIN_1904.tsv": {
+      "correct": 129,
+      "words": 135
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/GIRAUDOUX_ELECTRE_1937.tsv": {
+      "correct": 151,
+      "words": 155
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/HUGUES_CENDRILLON_1906.tsv": {
+      "correct": 112,
+      "words": 118
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/HUGUES_TYL_1906.tsv": {
+      "correct": 124,
+      "words": 131
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/LESENNE_REVEILCORNEILLE_1916.tsv": {
+      "correct": 133,
+      "words": 138
+    },
+    "Data_outOfDomain_normalised/theatre_normalised/20/RENARD_MAITRESSE_1927.tsv": {
+      "correct": 128,
+      "words": 132
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/ANONYME_PAIX-BERGERAC.tsv": {
+      "correct": 127,
+      "words": 139
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/ANONYME_REITRES.tsv": {
+      "correct": 149,
+      "words": 160
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/ARBEAU_BELLE.tsv": {
+      "correct": 117,
+      "words": 119
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/FRANCOISPREMIER_CORRESP.tsv": {
+      "correct": 73,
+      "words": 82
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/LENONCOURT-MARTIN_HYPNEROTOMACHIE.tsv": {
+      "correct": 121,
+      "words": 135
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/LIEBAUT_MISERES.tsv": {
+      "correct": 158,
+      "words": 167
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/LOUISELABE_ELEGIE.tsv": {
+      "correct": 128,
+      "words": 134
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/MARGUERITENAVARRE_MIROIR.tsv": {
+      "correct": 150,
+      "words": 162
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/RABELAIS_PANTAGRUEL.tsv": {
+      "correct": 94,
+      "words": 102
+    },
+    "Data_outOfDomain_normalised/varia_normalised/16/RONSARD_SONNETS.tsv": {
+      "correct": 148,
+      "words": 151
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/ANNEROHAN_PORTRAIT.tsv": {
+      "correct": 125,
+      "words": 130
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/ANONYME_AIRABOIRE.tsv": {
+      "correct": 148,
+      "words": 157
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/ANONYME_ARREST.tsv": {
+      "correct": 120,
+      "words": 128
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/BOILEAU_SATIRE.tsv": {
+      "correct": 112,
+      "words": 114
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/DONNEAU_NOUVELLES.tsv": {
+      "correct": 129,
+      "words": 134
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/ELISABETHBOHEME_CORRESPONDANCE.tsv": {
+      "correct": 122,
+      "words": 127
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/PERRAULT_PETIT-CHAPERON.tsv": {
+      "correct": 132,
+      "words": 139
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/POULLAIN_EGALITE.tsv": {
+      "correct": 140,
+      "words": 145
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/SCUDERY_ARTAMENE.tsv": {
+      "correct": 112,
+      "words": 115
+    },
+    "Data_outOfDomain_normalised/varia_normalised/17/VERVILLE_UN-JOUR.tsv": {
+      "correct": 121,
+      "words": 121
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/ANONYME_DECLARATION.tsv": {
+      "correct": 137,
+      "words": 143
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/CHARRIERE_LETTRE.tsv": {
+      "correct": 149,
+      "words": 153
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/CHATELET_DISCOURS.tsv": {
+      "correct": 180,
+      "words": 189
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/CHENIER_ODE.tsv": {
+      "correct": 129,
+      "words": 129
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/FREDERICDEUX_DIVINEEMILIE.tsv": {
+      "correct": 153,
+      "words": 154
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/MERICOURT_DISCOURS.tsv": {
+      "correct": 177,
+      "words": 183
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/MONTEGUT_ISMENE.tsv": {
+      "correct": 115,
+      "words": 115
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/ROUGET_MARSEILLAISE.tsv": {
+      "correct": 114,
+      "words": 121
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/TENCIN_SIEGE.tsv": {
+      "correct": 133,
+      "words": 138
+    },
+    "Data_outOfDomain_normalised/varia_normalised/18/VOLTAIRE_ZADIG.tsv": {
+      "correct": 113,
+      "words": 116
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/CMH_PV.tsv": {
+      "correct": 111,
+      "words": 126
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/DELESCLUZE_LETTRE.tsv": {
+      "correct": 145,
+      "words": 153
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/DEROULEDE_CHANTS.tsv": {
+      "correct": 127,
+      "words": 133
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/DESBORDESVALMORE_INSOMNIE.tsv": {
+      "correct": 150,
+      "words": 153
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/HEREDIA_EPEE.tsv": {
+      "correct": 139,
+      "words": 146
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/MERIMEE_ACADEMIE.tsv": {
+      "correct": 99,
+      "words": 108
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/POTTIER_INTERNATIONALE.tsv": {
+      "correct": 124,
+      "words": 134
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/SAND_MARIANNE.tsv": {
+      "correct": 109,
+      "words": 111
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/SEGUR_BOSSU.tsv": {
+      "correct": 139,
+      "words": 145
+    },
+    "Data_outOfDomain_normalised/varia_normalised/19/STAEL_ALLEMAGNE.tsv": {
+      "correct": 134,
+      "words": 144
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/ANONYME_CONSCRITS.tsv": {
+      "correct": 138,
+      "words": 145
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/BLUM_FRONTPOP.tsv": {
+      "correct": 108,
+      "words": 109
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/BRASILLACH_JEANNE.tsv": {
+      "correct": 138,
+      "words": 147
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/BRIMONT_MIRAGES.tsv": {
+      "correct": 123,
+      "words": 129
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/COLETTE_MAISON.tsv": {
+      "correct": 124,
+      "words": 127
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/LAHIRE_ROUE.tsv": {
+      "correct": 136,
+      "words": 147
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/LASTEYRIE_TESTAMENT.tsv": {
+      "correct": 109,
+      "words": 117
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/LONDRES_BAGNE.tsv": {
+      "correct": 146,
+      "words": 157
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/NOAILLES_COEUR.tsv": {
+      "correct": 113,
+      "words": 113
+    },
+    "Data_outOfDomain_normalised/varia_normalised/20/RACHILDE_GRENOUILLES.tsv": {
+      "correct": 143,
+      "words": 150
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_PARDONNEUR_v.1500_orig.tsv": {
+      "correct": 124,
+      "words": 137
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_PONTAUXANES_v.1500_orig.tsv": {
+      "correct": 121,
+      "words": 129
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_RESURRECTIONJENINLANDORE_v.1500_orig.tsv": {
+      "correct": 117,
+      "words": 125
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/ANONYME_SERMONJOYEUX_v.1500_orig.tsv": {
+      "correct": 104,
+      "words": 115
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/BEZE_ABRAHAM_1550_orig.tsv": {
+      "correct": 136,
+      "words": 146
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/GRINGORE_SAINT-LOUIS_1514_orig.tsv": {
+      "correct": 135,
+      "words": 148
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_CLEOPATRE_1574_orig.tsv": {
+      "correct": 101,
+      "words": 112
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_DIDON_1574_orig.tsv": {
+      "correct": 93,
+      "words": 103
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/JODELLE_EUGENE_1574_orig.tsv": {
+      "correct": 120,
+      "words": 128
+    },
+    "Data_outOfDomain_original/theatre_original/16_orig/TURNEBE_CONTENTS_1584.tsv": {
+      "correct": 103,
+      "words": 109
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/AUBIGNAC_PUCELLE_1642_orig.tsv": {
+      "correct": 134,
+      "words": 139
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/CHAMPREPUS_ULYSSE_1603_orig.tsv": {
+      "correct": 121,
+      "words": 131
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/CHAPPUZEAU_ARMETZAR_1656_orig.tsv": {
+      "correct": 113,
+      "words": 119
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DESHOULIERES_GENSERIC_1680_orig.tsv": {
+      "correct": 135,
+      "words": 138
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DESJARDINS_FAVORI_1665_orig.tsv": {
+      "correct": 141,
+      "words": 148
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/DURANT_OISIVETE_1699_orig.tsv": {
+      "correct": 156,
+      "words": 162
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/MATHIEU_MAGICIENNEETRANGERE_1617_orig.tsv": {
+      "correct": 125,
+      "words": 133
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/SCUDERY_LIGDAMONELIDIAS_1631_orig.tsv": {
+      "correct": 115,
+      "words": 117
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/URFE_SYLVANIRE_1627_orig.tsv": {
+      "correct": 107,
+      "words": 109
+    },
+    "Data_outOfDomain_original/theatre_original/17_orig/VONDREBECK-ALARD_FORCESDELAMOUR_1678_orig.tsv": {
+      "correct": 122,
+      "words": 123
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BERGASSE_JOURNEEDESDUPES_1790_orig.tsv": {
+      "correct": 129,
+      "words": 136
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BIEVRE_VERCINGENTORIXE_1770_orig.tsv": {
+      "correct": 115,
+      "words": 119
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/BOISSY_VIEESTUNSONGE_1732_orig.tsv": {
+      "correct": 135,
+      "words": 142
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DANCOURT_SANCHO_1712_orig.tsv": {
+      "correct": 131,
+      "words": 139
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DIDEROT_FILSNATUREL_1757_orig.tsv": {
+      "correct": 149,
+      "words": 155
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/DUFRESNY_MARIAGEFAITETROMPU_1721_orig.tsv": {
+      "correct": 131,
+      "words": 136
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/GUDIN_LOTHAIRE_1759_orig.tsv": {
+      "correct": 137,
+      "words": 142
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/MARIVAUX_PEREPRUDENT_1712_orig.tsv": {
+      "correct": 113,
+      "words": 115
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/REGNARD_MENECHMES_1705_orig.tsv": {
+      "correct": 135,
+      "words": 142
+    },
+    "Data_outOfDomain_original/theatre_original/18_orig/VOLTAIRE_MORTDECESAR_1736_orig.tsv": {
+      "correct": 114,
+      "words": 118
+    },
+    "Data_outOfDomain_original/theatre_original/19/ALLAIS_BONBOUGRE_1889.tsv": {
+      "correct": 131,
+      "words": 141
+    },
+    "Data_outOfDomain_original/theatre_original/19/AUDE_ECOLETRAGIQUE_1802.tsv": {
+      "correct": 120,
+      "words": 126
+    },
+    "Data_outOfDomain_original/theatre_original/19/BANVILLE_ANCIENPIERROT_1877.tsv": {
+      "correct": 142,
+      "words": 149
+    },
+    "Data_outOfDomain_original/theatre_original/19/BONNETAIN_APRESLEDIVORCE_1890.tsv": {
+      "correct": 150,
+      "words": 154
+    },
+    "Data_outOfDomain_original/theatre_original/19/CONSTANT_WALLSTEIN_1809.tsv": {
+      "correct": 112,
+      "words": 115
+    },
+    "Data_outOfDomain_original/theatre_original/19/DUMAS_DONJUAN_1836.tsv": {
+      "correct": 142,
+      "words": 144
+    },
+    "Data_outOfDomain_original/theatre_original/19/GENLIS_BELLEETLABETE_1829.tsv": {
+      "correct": 145,
+      "words": 150
+    },
+    "Data_outOfDomain_original/theatre_original/19/HUGO_HERNANI_1830.tsv": {
+      "correct": 135,
+      "words": 141
+    },
+    "Data_outOfDomain_original/theatre_original/19/JARRY_UBUROI_1896.tsv": {
+      "correct": 136,
+      "words": 141
+    },
+    "Data_outOfDomain_original/theatre_original/19/SAND_MOLIERE_1851.tsv": {
+      "correct": 120,
+      "words": 126
+    },
+    "Data_outOfDomain_original/theatre_original/20/ANOUILH_MEDEE_1946.tsv": {
+      "correct": 170,
+      "words": 186
+    },
+    "Data_outOfDomain_original/theatre_original/20/BERNARDT_PARTIEDEBRIDGE_1930.tsv": {
+      "correct": 132,
+      "words": 135
+    },
+    "Data_outOfDomain_original/theatre_original/20/BERTON_HOMMEQUIATUELAMORT_1928.tsv": {
+      "correct": 121,
+      "words": 124
+    },
+    "Data_outOfDomain_original/theatre_original/20/CESAIRE_CHRISTOPHE_1963.tsv": {
+      "correct": 136,
+      "words": 145
+    },
+    "Data_outOfDomain_original/theatre_original/20/COURTELINE_MONSIEURBADIN_1904.tsv": {
+      "correct": 128,
+      "words": 135
+    },
+    "Data_outOfDomain_original/theatre_original/20/GIRAUDOUX_ELECTRE_1937.tsv": {
+      "correct": 151,
+      "words": 155
+    },
+    "Data_outOfDomain_original/theatre_original/20/HUGUES_CENDRILLON_1906.tsv": {
+      "correct": 112,
+      "words": 118
+    },
+    "Data_outOfDomain_original/theatre_original/20/HUGUES_TYL_1906.tsv": {
+      "correct": 125,
+      "words": 131
+    },
+    "Data_outOfDomain_original/theatre_original/20/LESENNE_REVEILCORNEILLE_1916.tsv": {
+      "correct": 133,
+      "words": 138
+    },
+    "Data_outOfDomain_original/theatre_original/20/RENARD_MAITRESSE_1927.tsv": {
+      "correct": 129,
+      "words": 132
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ANONYME_PAIX-BERGERAC_orig.tsv": {
+      "correct": 127,
+      "words": 139
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ANONYME_REITRES_orig.tsv": {
+      "correct": 148,
+      "words": 160
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/ARBEAU_BELLE_orig.tsv": {
+      "correct": 113,
+      "words": 119
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/FRANCOISPREMIER_CORRESP_orig.tsv": {
+      "correct": 73,
+      "words": 82
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LENONCOURT-MARTIN_HYPNEROTOMACHIE_orig.tsv": {
+      "correct": 121,
+      "words": 135
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LIEBAUT_MISERES_orig.tsv": {
+      "correct": 156,
+      "words": 167
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/LOUISELABE_ELEGIE.tsv": {
+      "correct": 125,
+      "words": 134
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/MARGUERITENAVARRE_MIROIR_orig.tsv": {
+      "correct": 150,
+      "words": 162
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/RABELAIS_PANTAGRUEL_orig.tsv": {
+      "correct": 93,
+      "words": 102
+    },
+    "Data_outOfDomain_original/varia_original/16_orig/RONSARD_SONNETS_orig.tsv": {
+      "correct": 147,
+      "words": 151
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANNEROHAN_PORTRAIT_orig.tsv": {
+      "correct": 123,
+      "words": 130
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANONYME_AIRABOIRE_orig.tsv": {
+      "correct": 144,
+      "words": 157
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ANONYME_ARREST_orig.tsv": {
+      "correct": 119,
+      "words": 128
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/BOILEAU_SATIRE_orig.tsv": {
+      "correct": 113,
+      "words": 114
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/DONNEAU_NOUVELLES_orig.tsv": {
+      "correct": 126,
+      "words": 134
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/ELISABETHBOHEME_CORRESPONDANCE_orig.tsv": {
+      "correct": 123,
+      "words": 127
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/PERRAULT_PETIT-CHAPERON_orig.tsv": {
+      "correct": 132,
+      "words": 139
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/POULLAIN_EGALITE_orig.tsv": {
+      "correct": 140,
+      "words": 145
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/SCUDERY_ARTAMENE_orig.tsv": {
+      "correct": 112,
+      "words": 115
+    },
+    "Data_outOfDomain_original/varia_original/17_orig/VERVILLE_UN-JOUR_orig.tsv": {
+      "correct": 118,
+      "words": 121
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/ANONYME_DECLARATION_orig.tsv": {
+      "correct": 137,
+      "words": 143
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHARRIERE_LETTRE.tsv": {
+      "correct": 149,
+      "words": 153
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHATELET_DISCOURS_orig.tsv": {
+      "correct": 181,
+      "words": 189
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/CHENIER_ODE.tsv": {
+      "correct": 128,
+      "words": 129
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/FREDERICDEUX_DIVINEEMILIE.tsv": {
+      "correct": 153,
+      "words": 154
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/MERICOURT_DISCOURS_orig.tsv": {
+      "correct": 176,
+      "words": 183
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/MONTEGUT_ISMENE_orig.tsv": {
+      "correct": 115,
+      "words": 115
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/ROUGET_MARSEILLAISE.tsv": {
+      "correct": 114,
+      "words": 121
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/TENCIN_SIEGE_orig.tsv": {
+      "correct": 134,
+      "words": 138
+    },
+    "Data_outOfDomain_original/varia_original/18_orig/VOLTAIRE_ZADIG_orig.tsv": {
+      "correct": 113,
+      "words": 116
+    },
+    "Data_outOfDomain_original/varia_original/19/CMH_PV.tsv": {
+      "correct": 111,
+      "words": 126
+    },
+    "Data_outOfDomain_original/varia_original/19/DELESCLUZE_LETTRE.tsv": {
+      "correct": 145,
+      "words": 153
+    },
+    "Data_outOfDomain_original/varia_original/19/DEROULEDE_CHANTS.tsv": {
+      "correct": 127,
+      "words": 133
+    },
+    "Data_outOfDomain_original/varia_original/19/DESBORDESVALMORE_INSOMNIE.tsv": {
+      "correct": 149,
+      "words": 153
+    },
+    "Data_outOfDomain_original/varia_original/19/HEREDIA_EPEE.tsv": {
+      "correct": 139,
+      "words": 146
+    },
+    "Data_outOfDomain_original/varia_original/19/MERIMEE_ACADEMIE.tsv": {
+      "correct": 99,
+      "words": 108
+    },
+    "Data_outOfDomain_original/varia_original/19/POTTIER_INTERNATIONALE.tsv": {
+      "correct": 123,
+      "words": 134
+    },
+    "Data_outOfDomain_original/varia_original/19/SAND_MARIANNE.tsv": {
+      "correct": 109,
+      "words": 111
+    },
+    "Data_outOfDomain_original/varia_original/19/SEGUR_BOSSU.tsv": {
+      "correct": 139,
+      "words": 145
+    },
+    "Data_outOfDomain_original/varia_original/19/STAEL_ALLEMAGNE.tsv": {
+      "correct": 134,
+      "words": 144
+    },
+    "Data_outOfDomain_original/varia_original/20/ANONYME_CONSCRITS.tsv": {
+      "correct": 138,
+      "words": 145
+    },
+    "Data_outOfDomain_original/varia_original/20/BLUM_FRONTPOP.tsv": {
+      "correct": 108,
+      "words": 109
+    },
+    "Data_outOfDomain_original/varia_original/20/BRASILLACH_JEANNE.tsv": {
+      "correct": 139,
+      "words": 147
+    },
+    "Data_outOfDomain_original/varia_original/20/BRIMONT_MIRAGES.tsv": {
+      "correct": 124,
+      "words": 129
+    },
+    "Data_outOfDomain_original/varia_original/20/COLETTE_MAISON.tsv": {
+      "correct": 124,
+      "words": 127
+    },
+    "Data_outOfDomain_original/varia_original/20/LAHIRE_ROUE.tsv": {
+      "correct": 138,
+      "words": 147
+    },
+    "Data_outOfDomain_original/varia_original/20/LASTEYRIE_TESTAMENT.tsv": {
+      "correct": 109,
+      "words": 117
+    },
+    "Data_outOfDomain_original/varia_original/20/LONDRES_BAGNE.tsv": {
+      "correct": 147,
+      "words": 157
+    },
+    "Data_outOfDomain_original/varia_original/20/NOAILLES_COEUR.tsv": {
+      "correct": 113,
+      "words": 113
+    },
+    "Data_outOfDomain_original/varia_original/20/RACHILDE_GRENOUILLES.tsv": {
+      "correct": 144,
+      "words": 150
+    }
+  },
+  "seconds": 262,
+  "torch": "2.5.1+cu121"
+}

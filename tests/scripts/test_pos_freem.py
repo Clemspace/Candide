@@ -148,3 +148,31 @@ def test_headline_includes_clean_scores():
          "test_clean": {"centuries": {"original/17": {"acc": 0.7}, "original/18": {"acc": 0.9}}}}
     m = pw.headline(r)
     assert m["pos_clean/original_mean"] == pytest.approx(0.8) and m["pos_clean/original/18"] == 0.9
+
+
+ps = _load("pos_summary")
+
+
+def _result(tmp_path, name, accs, files=None, clean=None, model="candide:x/step_1.pt"):
+    r = {"model": model, "pretraining_step": 1, "protocol": {"lr": 3e-5, "epochs": 3, "seed": 1},
+         "dev": [{"dev_acc": 0.97}],
+         "test_centuries": {f"original/{c}": {"acc": a} for c, a in zip(("16", "17", "18"), accs)},
+         "test_clean": {"centuries": {f"original/{c}": {"acc": a} for c, a in zip(("16", "17", "18"), clean)}}
+         if clean else {}}
+    if files:
+        r["test_files"] = files
+    p = tmp_path / f"{name}.json"
+    p.write_text(__import__("json").dumps(r))
+    return p
+
+
+def test_summary_means_and_read_minus_clean(tmp_path):
+    files = {"Data_outOfDomain_original/varia_original/18_orig/A_orig.tsv": {"correct": 99, "words": 100},
+             "Data_outOfDomain_original/varia_original/18_orig/B_orig.tsv": {"correct": 90, "words": 100},
+             "Data_outOfDomain_original/varia_original/19/C.tsv": {"correct": 0, "words": 100}}
+    p = _result(tmp_path, "m", [0.90, 0.93, 0.96], files, clean=[0.91, 0.92, 0.93])
+    overlap = {"files": {"Data_outOfDomain_original/varia_original/18_orig/A_orig.tsv": {"share": 0.8}}}
+    s = ps.summarize([p], overlap, 0.05)["results"]["m"]
+    assert s["mean"] == pytest.approx(0.93) and s["clean"] == pytest.approx(0.92)
+    assert s["read_minus_clean"]["diff"] == pytest.approx(0.09)
+    assert s["read_minus_clean"]["clean"]["words"] == 100
