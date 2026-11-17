@@ -418,11 +418,11 @@ released by ERC ModERN.
 - A first run on obtic-gpu1 returned 0% everywhere: the manifest paths do not exist there, and the
   script counted unreadable files as "no overlap". Fixed: it stops when more than 1% of paths are
   missing or unreadable, and carries the positive control.
-- Two 19th-century passages matched. AUDE_ECOLETRAGIQUE_1802 is at 100% in
-  `modern_canon/theatre18_clean_AUDE_ECOLETRAGIQUE_clean.txt`: a play dated 1802 in the training canon.
-  GENLIS_BELLEETLABETE_1829 is at 51% in a Gallica *Théâtre d'éducation* file, probably the
-  1779-1780 text reprinted. **[verify: the date of the AUDE file in the inventory; if > 1800 it is a
-  leak through the date policy, for the data paper]**
+- Two passages of the 19th-century test set matched; neither is a leak past 1800.
+  AUDE_ECOLETRAGIQUE is at 100% in `modern_canon/theatre18_clean_AUDE_ECOLETRAGIQUE_clean.txt`: FreEM
+  files it under 1802, our copy is the 1798 edition (checked by Clément, 2026-11-17), so it is in
+  period. GENLIS_BELLEETLABETE_1829 is at 51% in a Gallica *Théâtre d'éducation* file, probably the
+  1779-1780 text reprinted. **[verify Genlis]**
 - The reverse holds for D'AlemBERT: all of FreEM_LPM, including the fine-tuning and dev text, is in
   its pretraining corpus (Gabay et al. 2022). It may contribute to its dev lead (98.7 against
   97.5-97.8 for Candide checkpoints).
